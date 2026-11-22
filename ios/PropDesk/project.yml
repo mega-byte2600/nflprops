@@ -1,0 +1,47 @@
+{
+  "name": "PropDesk",
+  "configVersion": 3,
+  "objectVersion": 56,
+  "attributes": {
+    "BuildIndependentTargetsInParallel": 1,
+    "LastSwiftUpdateCheck": 1620,
+    "LastUpgradeCheck": 1620
+  },
+  "targets": [
+    {
+      "name": "PropDesk",
+      "type": "application",
+      "platform": "iOS",
+      "deploymentTarget": "16.0",
+      "sources": [
+        "PropDesk/App/PropDeskApp.swift",
+        "PropDesk/Models/Prop.swift",
+        "PropDesk/Models/Snapshot.swift",
+        "PropDesk/Networking/SnapshotClient.swift",
+        "PropDesk/Views/PropListView.swift",
+        "PropDesk/Views/PropDetailView.swift",
+        "PropDesk/Views/SettingsView.swift"
+      ],
+      "settings": {
+        "base": {
+          "PRODUCT_BUNDLE_IDENTIFIER": "com.emporion.propdesk",
+          "GENERATE_INFOPLIST_FILE": true,
+          "INFOPLIST_KEY_UILaunchScreen_Generation": true,
+          "MARKETING_VERSION": "0.1.0",
+          "CURRENT_PROJECT_VERSION": "1",
+          "SWIFT_VERSION": "5.7",
+          "IPHONEOS_DEPLOYMENT_TARGET": "16.0",
+          "TARGETED_DEVICE_FAMILY": "1",
+          "CODE_SIGN_STYLE": "Automatic"
+        }
+      }
+    }
+  ],
+  "schemes": {
+    "PropDesk": {
+      "build": {
+        "targets": { "PropDesk": "all" }
+      }
+    }
+  }
+}

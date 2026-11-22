@@ -21,23 +21,11 @@ from .engine import Engine
 
 
 def _resolve_player(df, name, stat=None):
-    names = d.get_names(df)
-    hits = [pid for pid, nm in names.items() if name.lower() in str(nm).lower()]
-    if not hits:
-        sys.exit(f"no player matching '{name}' (name is in data only if they had usage)")
-    if len(hits) == 1:
-        return hits[0]
-    # multiple names: prefer the one with the most usage in the requested stat
-    # (e.g. Justin Jefferson over Shawn Jefferson for receiving), else most games.
-    if stat is not None:
-        sub = df[df["player_id"].isin(hits) & df[stat].notna()]
-        if not sub.empty:
-            vol = sub.groupby("player_id")[stat].apply(lambda s: (s > 0).sum())
-            if len(vol):
-                return str(vol.sort_values(ascending=False).index[0])
-    # fallback: most total games
-    g = df[df["player_id"].isin(hits)].groupby("player_id").size()
-    return g.sort_values(ascending=False).index[0]
+    """Back-compat wrapper around data.resolve_player (shared helper)."""
+    try:
+        return d.resolve_player(df, name, stat)
+    except KeyError as e:
+        sys.exit(str(e))
 
 
 def cmd_forecast(args):

@@ -80,3 +80,28 @@ def available_players(df: pd.DataFrame, stat: str, min_games: int = 8) -> pd.Ser
     """Players with at least min_games of non-null usage in a stat."""
     g = df[df[stat].notna()].groupby("player_id")[stat]
     return g.agg(lambda s: (s > 0).sum() >= min_games)
+
+
+def resolve_player(df: pd.DataFrame, name: str, stat: str | None = None) -> str:
+    """Resolve a display name (possibly partial) to a player_id.
+
+    Disambiguates same-name players by preferring the one with the most
+    positive-usage rows in the requested stat (e.g. Justin Jefferson over
+    retired Shawn Jefferson for receiving), else most total games. Raises
+    KeyError if no player matches. Shared by the CLI and the snapshot server.
+    """
+    names = get_names(df)
+    hits = [pid for pid, nm in names.items() if name.lower() in str(nm).lower()]
+    if not hits:
+        raise KeyError(
+            f"no player matching '{name}' (in data only if they had usage)")
+    if len(hits) == 1:
+        return str(hits[0])
+    if stat is not None:
+        sub = df[df["player_id"].isin(hits) & df[stat].notna()]
+        if not sub.empty:
+            vol = sub.groupby("player_id")[stat].apply(lambda s: (s > 0).sum())
+            if len(vol):
+                return str(vol.sort_values(ascending=False).index[0])
+    g = df[df["player_id"].isin(hits)].groupby("player_id").size()
+    return str(g.sort_values(ascending=False).index[0])
