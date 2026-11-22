@@ -175,8 +175,7 @@ def opponent_adjusted(df: pd.DataFrame, pass_weight: float = 0.70,
     # defenses they faced this season (game-level proxy).
     mask = neutral_script_mask(df)
     sub = df[mask][["posteam", "defteam"]].dropna()
-    faced = sub.groupby("posteam")["defteam"].first() if False else \
-        sub.groupby(["posteam", "defteam"]).size().reset_index(name="games")
+    faced = sub.groupby(["posteam", "defteam"]).size().reset_index(name="games")
 
     rows = []
     for _, row in r.iterrows():
