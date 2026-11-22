@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Data (large, licensed - kept out of the repo, fetched via nflprops.ensure_cache)
+cache/
+*.csv
+*.rds
+
+# Env / secrets — never commit keys
+.env
+.env.*
+*.key
+*.pem
+TOKENS_*
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
