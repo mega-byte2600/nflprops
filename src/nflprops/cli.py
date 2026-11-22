@@ -46,11 +46,12 @@ def cmd_forecast(args):
     pid = _resolve_player(df, args.player, args.stat)
     p = eng.player(pid)
     if p.name: print(f"\n{p.name} ({pid})")
-    fc = eng.forecast(pid, args.stat, args.line, n=args.n)
+    fc = eng.forecast(pid, args.stat, args.line, n=args.n, ci_level=args.ci)
     if fc is None:
         sys.exit(f"no fit for {p.name} in stat '{args.stat}'")
     print(f"  {args.stat} O/U {args.line}:  P(over)={fc.p_over:.1%}")
-    print(f"  median={fc.median:.1f}  mean={fc.mean:.1f}  90% CI=({fc.ci90[0]:.1f}-{fc.ci90[1]:.1f})")
+    lo,hi=fc.ci
+    print(f"  median={fc.median:.1f}  mean={fc.mean:.1f}  {fc.ci_level:.0%} CI=({lo:.1f}-{hi:.1f})")
     if args.american is not None:
         user_decimal = odds.prob_to_decimal(odds.american_to_prob(args.american))
         rhs = odds.ev(fc.p_over, user_decimal)
@@ -114,6 +115,7 @@ def main(argv=None):
     f = sub.add_parser("forecast", help="forecast a single prop")
     f.add_argument("player"); f.add_argument("stat"); f.add_argument("line", type=float)
     f.add_argument("--american", type=float, help="your American price, e.g. 110 or -115")
+    f.add_argument("--ci", type=float, default=0.95, help="CI coverage, e.g. 0.95 (default) or 0.90")
     f.add_argument("--n", type=int, default=10000)
     f.add_argument("--bankroll", type=float, default=10000.0)
     f.add_argument("--kelly-frac", type=float, default=0.25)

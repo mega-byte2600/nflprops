@@ -138,7 +138,17 @@ def test_engine_forecast():
     fc = eng.forecast("P1", "receiving_yards", 80, n=5000)
     assert fc is not None
     assert 0.0 < fc.p_over < 1.0
-    assert fc.ci90[0] <= fc.ci90[1]
+    assert fc.ci[0] <= fc.ci[1]
+    assert fc.ci_level == 0.95  # standard two-sided default
+
+
+def test_engine_forecast_ci_level():
+    eng = Engine(DF, seed=42)
+    fc95 = eng.forecast("P1", "receiving_yards", 80, n=10000, ci_level=0.95)
+    fc90 = eng.forecast("P1", "receiving_yards", 80, n=10000, ci_level=0.90)
+    # wider interval at higher coverage
+    assert fc95 is not None and fc90 is not None
+    assert (fc95.ci[1] - fc95.ci[0]) > (fc90.ci[1] - fc90.ci[0])
 
 
 def test_calibration_pit_runs():

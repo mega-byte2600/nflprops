@@ -35,7 +35,8 @@ class PropForecast:
     p_over: float               # P(stat > line), after calibration if applied
     median: float
     mean: float
-    ci90: tuple[float, float]
+    ci_level: float             # e.g. 0.95 -> 90/95% CI band
+    ci: tuple[float, float]    # side percentiles (2.5%, 97.5%) at 95%
 
 
 class Engine:
@@ -63,12 +64,15 @@ class Engine:
             lambda pid, stat: self.player(player_id).fits.get(stat), player_id, n, self.rng)
 
     def forecast(self, player_id: str, stat: str, line: float, n: int = 10000,
-                 calibration: object | None = None) -> PropForecast | None:
+                 calibration: object | None = None,
+                 ci_level: float = 0.95) -> PropForecast | None:
         """Forecast P(stat > line) with Monte Carlo + optional calibration.
 
         Pass a Calibration (from nflprops.calibration) to correct the raw
         over-probability; raw fits are NOT calibrated out of the box (the PIT
         backtest measures this) so calibration should be applied for real use.
+        ci_level: two-sided coverage for the reported interval (default 0.95
+        = the statistical standard; pass 0.90 for the 90% band).
         """
         fit = self.player(player_id).fits.get(stat)
         if fit is None:
@@ -78,11 +82,14 @@ class Engine:
             return None
         raw = float((samples > line).mean())
         p_over = calibration_reverse_function(calibration, raw) if calibration else raw
+        lo = 100.0 * (1 - ci_level) / 2.0
+        hi = 100.0 - lo
         return PropForecast(
             stat=stat, line=line,
             df=pd.DataFrame({stat: samples}),
             samples=samples, p_active=fit.p_active, p_over=p_over,
             median=float(np.median(samples)),
             mean=float(samples.mean()),
-            ci90=(float(np.percentile(samples, 5)), float(np.percentile(samples, 95))),
+            ci_level=ci_level,
+            ci=(float(np.percentile(samples, lo)), float(np.percentile(samples, hi))),
         )
