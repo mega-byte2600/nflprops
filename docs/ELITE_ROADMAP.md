@@ -17,8 +17,8 @@ and the math canon in nfl-prop-prop-betting / nfl-prop-math-canon.
 | 1 | `elite.py`: neutral-script EPA team ratings + pass-weighted dropback efficiency | ✅ done | pass EPA +0.014 > run EPA -0.027 on 2023; SF/MIA/DET top, NYJ/CAR/NYG worst |
 | 2 | Opponent-quality adjustment (defense-strength schedule) | ✅ done | BAL/CLE/NE strong D; opponent-adj bumps IND/LAC/JAX/HOU up, DAL/SF/BAL/NYG down |
 | 3 | Team-strength PRIOR on player projections (Gelman partial-pooling) | ✅ done | corr(team rating, team rec-ypg)=0.72 '23 / 0.36 '24; shrinkage falls 0.085→0.019→0.010 as games rise; high-usage players defer to own record (w=0.99) |
-| 4 | Discrete-event possession simulator (drive-level, EPA-driven) for team/season totals | ⬜ | — |
-| 5 | Ingest seam: strike on EPA-vs-closing-line gap (sharp-style, pre-hydration) | ⬜ | — |
+| 4 | Possession-level discrete-event simulator (drive=atomic unit, field-stratified) | ✅ done | 15,988 real drives; RAW team 20.8pts/363yds/41.6 total ≈ NFL; rated SF@DAL: 22.0pts/390yds; 90% CI total (25,65). Field-start empirical fix cut 2x scoring inflation |
+| 5 | Strike seam: EPA/total gap vs market anchor, CI-gated, honest | ✅ done | SF@DAL: sim 22.3 vs 24.5 → gap -2.2, 90% CI (9.6,38.3) → no-striking-edge (correct: within noise); refuses to invent a market anchor keyless |
 
 ## The elite methodology we are implementing (from the research)
 
