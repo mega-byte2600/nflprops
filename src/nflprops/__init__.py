@@ -8,16 +8,26 @@ executing well (line shopping + CLV).
 from .calibration import Calibration, pit_backtest
 from .copula import GaussianCopula, spearman_matrix
 from .data import STAT_FAMILY, ensure_cache, load_stats
+from .elite import (
+                    defense_strength,
+                    load_pbp,
+                    neutral_script_mask,
+                    opponent_adjusted,
+                    partial_pool,
+                    ratings,
+                    team_context_pool,
+                    team_implied_mean,
+)
 from .engine import Engine, Player, PropForecast
 from .marginals import Marginal, fit_player, over_prob, quantile
 from .odds import (
-                   american_to_prob,
-                   clv_signal,
-                   edge,
-                   ev,
-                   fractional_kelly_stake,
-                   kelly_fraction,
-                   prob_to_american,
+                    american_to_prob,
+                    clv_signal,
+                    edge,
+                    ev,
+                    fractional_kelly_stake,
+                    kelly_fraction,
+                    prob_to_american,
 )
 
 __version__ = "0.1.0"
@@ -31,16 +41,24 @@ __all__ = [
                    "PropForecast",
                    "american_to_prob",
                    "clv_signal",
+                   "defense_strength",
                    "edge",
                    "ensure_cache",
                    "ev",
                    "fit_player",
                    "fractional_kelly_stake",
                    "kelly_fraction",
+                   "load_pbp",
                    "load_stats",
+                   "neutral_script_mask",
+                   "opponent_adjusted",
                    "over_prob",
+                   "partial_pool",
                    "pit_backtest",
                    "prob_to_american",
                    "quantile",
+                   "ratings",
                    "spearman_matrix",
+                   "team_context_pool",
+                   "team_implied_mean",
 ]

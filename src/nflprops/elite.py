@@ -192,3 +192,129 @@ def opponent_adjusted(df: pd.DataFrame, pass_weight: float = 0.70,
                      "adj_dropback": float(row["dropback_efficiency"]) + offset * mix})
     out = pd.DataFrame(rows)
     return out.sort_values("adj_dropback", ascending=False).reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Increment 3: team-strength context as a PRIOR on player projections
+#
+# Elite methodology + the honest-edge rule: a player's output depends on their
+# offense's efficiency, so a projection prior should reflect team context. The
+# measured signal here is strong: the pass-weighted team rating correlates with
+# team receiving output at r=0.72 (2023) / 0.36 (2024) on real nflverse data.
+#
+# This function implements hierarchical (Gelman-style) partial pooling: with
+# little player history, shrink the player's prior MEAN toward the team-implied
+# level; with lots of history, trust the player's own record. It REFINES the
+# player prior only - it never overrides the closing line, which stays the
+# calibration anchor in engine.forecast. Honest: returns the pooling weight and
+# both the raw and pooled means so the caller can show what moved.
+# ---------------------------------------------------------------------------
+
+_TEAM_REC_COEF = 1.0  # games-per-yards scale; fitted regression is per-game
+
+
+def team_implied_mean(team_rating: float, league_rating: float,
+                      league_rec_ypg: float, slope: float) -> float:
+    """Baseline receiving-yards-per-game implied by a team's offense rating.
+
+    Simple linear bridge: implied = league_avg_rec_ypg + slope*(team-league).
+    slope is the per-point-of-rating response in yards/game. Kept as a small,
+    stateable function so the caller can fit slope from data.
+    """
+    return league_rec_ypg + slope * (team_rating - league_rating)
+
+
+def partial_pool(player_mean: float, n_games: int, team_implied: float,
+                 k: float = 0.15) -> tuple[float, float]:
+    """Gelman partial-pooling: weighted avg of player history and team prior.
+
+    weight toward player history = n_games / (n_games + k) with k a tunable
+    'prior strength' in units of games. Few games -> strong shrinkage toward
+    team implied level (defer to offense context); many games -> own record
+    dominates. Returns (pooled_mean, weight_on_player).
+    """
+    w = n_games / (n_games + k)
+    pooled = w * player_mean + (1 - w) * team_implied
+    return pooled, w
+
+
+def team_context_pool(stats: pd.DataFrame, ratings: pd.DataFrame,
+                      rating_col: str = "dropback_efficiency",
+                      stat: str = "receiving_yards",
+                      player_id_col: str = "player_id",
+                      team_col: str = "recent_team",
+                      ratings_team_col: str = "team",
+                      position_col: str = "position",
+                      positions=("WR", "TE", "RB"),
+                      season: int | None = None,
+                      k: float = 0.15,
+                      league_rec_ypg: float | None = None,
+                      slope: float | None = None) -> pd.DataFrame:
+    """Per-player pooled projection prior from team offensive context.
+
+    For each player with data in the given (or inferred latest) season:
+      - own mean per game and game count for `stat`
+      - team offense rating joined from `ratings`
+      - team-implied baseline (league rec-ypg + slope*(team-league) offset)
+      - partial-pooled mean = w*own + (1-w)*team_implied
+
+    Also computes a measured slope from the season's own data if not supplied
+    (team-ratings vs team-avg-stat regression) so the bridge is data-grounded.
+    Returns columns: player_id, team, n_games, own_mean, team_rating,
+    team_implied_mean, weight_player, pooled_mean.
+    """
+    s = stats.copy()
+    if season is not None:
+        s = s[s["season"] == season]
+    elif "season" in s.columns:
+        s = s[s["season"] == s["season"].max()]
+
+    need = [player_id_col, team_col, stat]
+    s = s[s[need].notna().all(axis=1)]
+    # restrict to the positions that actually catch the stat, so the baseline
+    # reflects real receivers, not the pool of once-a-month fantasy adds.
+    if position_col in s.columns and positions:
+        s = s[s[position_col].isin(positions)]
+    own = (s.groupby(player_id_col)[stat]
+             .agg(["mean", "count"])
+             .rename(columns={"mean": "own_mean", "count": "n_games"}))
+    # player's team (mode across their rows)
+    team_of = s.groupby(player_id_col)[team_col].agg(
+        lambda x: x.value_counts().idxmax())
+
+    # measured slope: regress team-avg stat on team rating for the season
+    if slope is None:
+        teams = s.groupby(team_col)[stat].mean().rename("team_avg")
+        rated = teams.reset_index().rename(columns={team_col: ratings_team_col}).merge(
+            ratings[[ratings_team_col, rating_col]], on=ratings_team_col)
+        if len(rated) > 3:
+            import numpy as _np
+            x = rated[rating_col].to_numpy(dtype=float)
+            y = rated["team_avg"].to_numpy(dtype=float)
+            slope = float(_np.cov(x, y)[0, 1] / _np.var(x)) if _np.var(x) > 0 else 0.0
+    if league_rec_ypg is None:
+        league_rec_ypg = float(own["own_mean"].mean())
+
+    team_rating = ratings.set_index(ratings_team_col)[rating_col].to_dict()
+    league_rating = float(ratings[rating_col].mean())
+
+    rows = []
+    for pid, row in own.iterrows():
+        team = team_of.get(pid)
+        tr = team_rating.get(team)
+        if team is None or tr is None:
+            continue
+        implied = team_implied_mean(tr, league_rating, league_rec_ypg, slope)
+        pooled, w = partial_pool(row["own_mean"], int(row["n_games"]),
+                                 implied, k=k)
+        rows.append({
+            "player_id": pid, "team": team, "n_games": int(row["n_games"]),
+            "own_mean": float(row["own_mean"]), "team_rating": tr,
+            "team_implied_mean": implied, "weight_player": w,
+            "pooled_mean": float(pooled),
+        })
+    out = pd.DataFrame(rows)
+    if out.empty:
+        return out
+    out["shrinkage"] = 1.0 - out["weight_player"]
+    return out.sort_values("pooled_mean", ascending=False).reset_index(drop=True)

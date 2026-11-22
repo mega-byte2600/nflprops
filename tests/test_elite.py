@@ -87,3 +87,39 @@ def test_opponent_adjusted_runs_and_returns_rows():
     # mix=0 returns raw (no schedule movement); mix>0 can move it
     raw = E.opponent_adjusted(df, mix=0)
     assert abs(raw["adj_dropback"] - raw["dropback_efficiency"]).max() < 1e-9
+
+
+def test_partial_pool_shrinks_small_samples():
+    # few games -> strong pull toward team implied; many -> own record wins
+    pooled_low, w_low = E.partial_pool(player_mean=80, n_games=1,
+                                       team_implied=60, k=0.5)
+    pooled_high, w_high = E.partial_pool(player_mean=80, n_games=40,
+                                         team_implied=60, k=0.5)
+    assert pooled_low < pooled_high           # low sample pulled toward 60
+    assert w_low < w_high                     # less weight on player w/ fewer games
+    # with k=0.15 the high-sample weight is nearly 1
+    _, w = E.partial_pool(80, 40, 60, k=0.15)
+    assert w > 0.99
+
+
+def test_team_context_pool_uses_team_signal():
+    # need a player_stats-like frame with team + position + receiving_yards
+    stats = pd.concat([
+        pd.DataFrame({
+            "player_id": [f"P{i}"] * 17,
+            "recent_team": [f"TM{i % 8 + 1}"] * 17,
+            "position": ["WR"] * 17,
+            "receiving_yards": rng5.uniform(30, 120, 17),
+        }) for i, rng5 in enumerate([np.random.default_rng(s) for s in range(12)])
+    ])
+    rat = pd.DataFrame({
+        "team": [f"TM{i+1}" for i in range(8)],
+        "dropback_efficiency": [0.15, 0.10, 0.05, 0.0, -0.05, -0.1, -0.15, -0.2],
+    })
+    pool = E.team_context_pool(stats, rat, positions=("WR",))
+    assert "pooled_mean" in pool.columns
+    assert "weight_player" in pool.columns
+    assert len(pool) == 12
+    # a high-usage player (17 games) should weight own record heavily
+    hi = pool.sort_values("n_games", ascending=False).iloc[0]
+    assert hi["weight_player"] > 0.9
