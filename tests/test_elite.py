@@ -16,7 +16,7 @@ def make_pbp(n_per_team=400, seed=0):
     teams = [f"TM{i}" for i in range(1, 9)]
     rows = []
     for t in teams:
-        # simulate ~n plays: mix pass/run, neutral + some garbage (qtr 4)
+        opps = [o for o in teams if o != t]
         for _ in range(n_per_team):
             pass_epa = 0.08   # elite offense pass EPA
             run_epa = 0.01
@@ -24,8 +24,9 @@ def make_pbp(n_per_team=400, seed=0):
             play = "pass" if rng.random() < 0.55 else "run"
             epa = pass_epa if play == "pass" else run_epa
             wp = rng.uniform(0.1, 0.9)
+            defteam = rng.choice(opps)
             rows.append({
-                "posteam": t, "play_type": play, "epa": epa,
+                "posteam": t, "defteam": defteam, "play_type": play, "epa": epa,
                 "qtr": qtr, "wp": wp, "down": rng.integers(1, 5),
             })
     return pd.DataFrame(rows)
@@ -68,3 +69,21 @@ def test_pass_weight_drives_composite():
     high_w = E.ratings(df, pass_weight=0.90)
     assert abs(high_w["dropback_efficiency"].mean() - 0.08) < \
            abs(r["dropback_efficiency"].mean() - 0.08) or True  # just structural
+
+
+def test_defense_strength_inverts_allowed():
+    df = make_pbp(seed=3)
+    d = E.defense_strength(df)
+    # high defense_strength == low (negative) allowed EPA
+    r = np.corrcoef(d["def_epa_allowed_per_play"], d["defense_strength"])[0, 1]
+    assert r < -0.99  # exact inversion
+
+
+def test_opponent_adjusted_runs_and_returns_rows():
+    df = make_pbp(seed=4)
+    oa = E.opponent_adjusted(df)
+    assert "adj_dropback" in oa.columns
+    assert len(oa) > 0
+    # mix=0 returns raw (no schedule movement); mix>0 can move it
+    raw = E.opponent_adjusted(df, mix=0)
+    assert abs(raw["adj_dropback"] - raw["dropback_efficiency"]).max() < 1e-9
