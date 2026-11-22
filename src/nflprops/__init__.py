@@ -35,7 +35,12 @@ from .simulator import (
     drive_points,
     load_drive_table,
 )
-from .strike import rank_strike_candidates, simulate_matchup_total, strike_signal
+from .strike import (
+    anchored_over_probability,
+    rank_strike_candidates,
+    simulate_matchup_total,
+    strike_signal,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -49,6 +54,7 @@ __all__ = [
     "PossessionSimulator",
     "PropForecast",
     "american_to_prob",
+    "anchored_over_probability",
     "clv_signal",
     "defense_strength",
     "drive_points",

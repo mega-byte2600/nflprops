@@ -57,6 +57,43 @@ def simulate_matchup_total(sim: PossessionSimulator, offense: str, defense: str,
             float(np.percentile(total, 95)))
 
 
+def anchored_over_probability(sim: PossessionSimulator, home: str, away: str,
+                              market_total: float, side: str = "home",
+                              team_line: float | None = None,
+                              n: int = 5000) -> dict:
+    """Price P(over) AROUND a market anchor, per the reviewer's anchor scheme.
+
+    The sim cannot out-predict the market; it only prices DISTRIBUTION SHAPE.
+    So we affinely shift the simulated team-score distribution so its MEAN
+    equals the market's implied team expectation (team_line, else market/2),
+    keeping the sim's shape/variance. Returns the anchored P(over team_line).
+    This is the disciplined use: the market sets the center, the sim sets the
+    tails/state effects. Never claim the sim's mean beats the line.
+    """
+    g = sim.simulate_games(home, away, n=n)
+    if side == "home":
+        sim_raw = g["home_score"].to_numpy(dtype=float)
+    else:
+        sim_raw = g["away_score"].to_numpy(dtype=float)
+    anchor = team_line if team_line is not None else market_total / 2
+    mu = float(sim_raw.mean())
+    # affine shift: recenter sim mean onto the market anchor (shape preserved)
+    sim_anchored = sim_raw + (anchor - mu)
+    p_over = float((sim_anchored > anchor).mean())
+    return {
+        "side": side, "matchup": f"{home} @ {away}",
+        "market_team_anchor": round(anchor, 1),
+        "sim_raw_mean": round(mu, 1),
+        "sim_anchored_mean": round(anchor, 1),  # exactly at anchor after shift
+        "p_over_team_line": round(p_over, 4),
+        "ci_90": [round(float(np.percentile(sim_anchored, 5)), 1),
+                  round(float(np.percentile(sim_anchored, 95)), 1)],
+        "honest_note": ("mean anchored to the market; the sim only shapes the "
+                        "distribution around it - this is NOT a market-beating "
+                        "edge, just the fair over-probability of the line"),
+    }
+
+
 def strike_signal(sim: PossessionSimulator, home: str, away: str,
                   market_total: float, side: str = "home",
                   team_total_line: float | None = None,

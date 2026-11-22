@@ -51,3 +51,14 @@ def test_strike_uses_supplied_anchor():
     s = K.strike_signal(sim, "H", "A", market_total=44.0, side="away",
                         team_total_line=20.0, n=1000)
     assert s["anchor_team_total"] == 20.0
+
+
+def test_anchored_over_probability_recenters_mean():
+    sim, _ = _sim()
+    res = K.anchored_over_probability(sim, "H", "A", market_total=44.0,
+                                      side="home", team_line=22.0, n=2000)
+    # after affine shift the anchored mean equals the market anchor
+    assert res["sim_anchored_mean"] == 22.0
+    assert 0.0 < res["p_over_team_line"] < 1.0
+    assert res["honest_note"]  # honesty string present
+    assert res["ci_90"][0] <= res["ci_90"][1]

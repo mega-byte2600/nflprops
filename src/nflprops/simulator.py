@@ -63,6 +63,16 @@ class FieldPositionStratifiedDriveSampler:
         # start position) - real drives start at own-35 ~half the time and
         # occasionally midfield/opponent-side (short punts, turnovers)
         self.start_ydl_support = self.drive_df["start_ydl"].to_numpy(dtype=float)
+        # empirical drive TIME OF POSSESSION (seconds) for the clock state
+        if "drive_time_of_possession" in self.drive_df.columns:
+            top = pd.to_timedelta(
+                self.drive_df["drive_time_of_possession"].astype(str),
+                errors="coerce").dt.total_seconds()
+            top = top.dropna()
+            self.top_support = top.to_numpy(dtype=float) if len(top) else \
+                np.full(100, 150.0)
+        else:
+            self.top_support = np.full(1000, 150.0)  # ~2.5 min fallback
         self.bins = np.array(field_bins)
         # classify end states
         self.drive_df["outcome"] = self.drive_df["end_state"].apply(
@@ -154,35 +164,64 @@ class PossessionSimulator:
         return k * (o - de)
 
     def simulate_game(self, home: str, away: str,
-                      drives_limit: int = 24) -> dict[str, float]:
-        """Simulate one game (alternating possession) -> team score + yards."""
+                      drives_limit: int | None = None) -> dict[str, float]:
+        """Simulate one game (alternating possession) -> team score + yards.
+
+        Carries the reviewer-named MINIMUM statefulness: possession, score,
+        a running game clock (game_seconds_remaining, 4x15-min quarters sampled
+        from empirical drive time-of-possession), and a quarter. Drives tick the
+        clock down; a half/game ends when the clock expires, so late-game
+        variance is preserved rather than flattened. If drives_limit is given,
+        that caps drives per game regardless of clock.
+        """
         score = {home: 0.0, away: 0.0}
         yards = {home: 0.0, away: 0.0}
         possession = home
-        # Drives start from the EMPIRICAL start-field distribution (own-35 is
-        # most common; midfield/opponent-side happen on short punts/turnovers).
-        # This is the reviewer-flagged fix: hand-set resets to deep/red-zone
-        # fields inflated scoring ~2x. The empirical table is the truth.
+        # clock: 4 quarters x 900s; start full game
+        clock = {q: 900.0 for q in (1, 2, 3, 4)}
+        quarter = 1
+        # Drives start from the EMPIRICAL start-field distribution (own-35 most
+        # common; midfield/opponent-side from short punts/turnovers). Reviewer-
+        # flagged fix: hand-set deep/red-zone fields inflated scoring ~2x.
         start_ydl = float(self.rng.choice(self.sampler.start_ydl_support))
-        for _ in range(drives_limit):
+        drives_used = 0
+        while quarter <= 4:
+            if drives_limit is not None and drives_used >= drives_limit:
+                break
             shift = self._possession_shift(possession,
                                            away if possession == home else home)
             d_y, d_p, _ = self.sampler.sample_drive(start_ydl, shift, self.rng)
             score[possession] += d_p
             yards[possession] += d_y
+            drives_used += 1
+            # consume drive time from the clock (empirical TOP)
+            top = float(self.rng.choice(self.sampler.top_support)) \
+                if len(self.sampler.top_support) else 150.0
+            clock[quarter] -= top
+            if clock[quarter] <= 0:
+                # end of quarter; carry time spent into next if same half
+                if quarter in (1, 3):
+                    quarter += 1
+                elif quarter == 2:
+                    quarter = 3
+                    clock[2] = 0.0   # halftime
+                    clock[3] = 900.0
+                else:
+                    break  # end of 4th
             # next drive starts wherever possessions really start
             start_ydl = float(self.rng.choice(self.sampler.start_ydl_support))
             possession = away if possession == home else home
         return {"home_score": score[home], "away_score": score[away],
                 "home_yards": yards[home], "away_yards": yards[away]}
 
-    def simulate_games(self, home: str, away: str, n: int = 10000) -> pd.DataFrame:
+    def simulate_games(self, home: str, away: str, n: int = 10000,
+                       drives_limit: int | None = None) -> pd.DataFrame:
         """Run n games; concatenate per-team score/yards. Fast via vectorized
         loops only where safe; here a plain loop over n is fine for 10k.
         """
         rows = []
         for _ in range(n):
-            rows.append(self.simulate_game(home, away))
+            rows.append(self.simulate_game(home, away, drives_limit=drives_limit))
         return pd.DataFrame(rows)
 
     def team_total_distribution(self, home: str, away: str, n: int = 10000,

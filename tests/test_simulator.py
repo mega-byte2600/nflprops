@@ -85,3 +85,21 @@ def test_simulator_reproducible_with_seed():
     g1 = sim1.simulate_games("H", "A", n=2000)
     g2 = sim2.simulate_games("H", "A", n=2000)
     assert np.allclose(g1["home_score"], g2["home_score"])
+
+
+def test_clock_state_ends_game_and_stays_realistic():
+    # the clock-state game should produce plausible totals and finish (no hang)
+    df = make_drives()
+    sim = S.PossessionSimulator(df, {}, {}, rng=np.random.default_rng(7))
+    g = sim.simulate_games("H", "A", n=1500)
+    # must produce finite, non-huge totals (clock keeps it bounded)
+    assert np.isfinite(g["home_score"].sum())
+    assert (np.abs(g["home_score"]).max() < 60)
+
+
+def test_drives_limit_still_respected():
+    df = make_drives()
+    sim = S.PossessionSimulator(df, {}, {}, rng=np.random.default_rng(3))
+    # a strict drives cap bounds drives; scores still finite
+    g = sim.simulate_games("H", "A", n=500, drives_limit=8)
+    assert np.isfinite(g["home_score"].sum())
