@@ -43,10 +43,10 @@ def recenter(fit: M.Marginal, target_mean: float) -> M.Marginal:
     """
     t = max(0.5, float(target_mean))
     if fit.family == "gamma_zinf":
-        sh, sc = fit.params          # mean = sh*sc -> scale = t/sh
+        sh, _sc = fit.params        # mean = sh*scale -> scale = t/sh
         return M.Marginal(fit.stat, fit.family, (sh, t / sh), fit.p_active, fit.n)
     if fit.family == "normal_zinf":
-        mu, sd = fit.params
+        _mu, sd = fit.params
         return M.Marginal(fit.stat, fit.family, (t, sd), fit.p_active, fit.n)
     if fit.family == "poisson":
         return M.Marginal(fit.stat, fit.family, (t,), fit.p_active, fit.n)
