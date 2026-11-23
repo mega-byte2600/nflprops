@@ -18,8 +18,6 @@ Fetch: GET /snapshot   -> signed JSON
 from __future__ import annotations
 
 import argparse
-import hashlib
-import hmac
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -29,7 +27,12 @@ import pandas as pd
 
 from nflprops import load_stats
 
-from snapshot_server import _hmac_hex, build_snapshot
+# sibling import that works both when run as a script (ios/backend/) and when
+# imported from the test suite
+try:
+    from .snapshot_server import _hmac_hex, build_snapshot
+except ImportError:  # pragma: no cover - run directly as a script
+    from snapshot_server import _hmac_hex, build_snapshot
 
 
 class _ConfigServer(ThreadingHTTPServer):
@@ -38,6 +41,7 @@ class _ConfigServer(ThreadingHTTPServer):
     n: int = 15000
     ci: float = 0.95
     secret: str = ""
+    specs: list | None = None   # optional (player, stat, line) override
 
 
 class SnapshotHandler(BaseHTTPRequestHandler):
@@ -63,13 +67,18 @@ class SnapshotHandler(BaseHTTPRequestHandler):
             self._send(404, json.dumps({"error": "not found"}).encode())
             return
         try:
-            snap = build_snapshot(self.server.stats,
-                                  n=self.server.n, ci=self.server.ci)
+            specs = getattr(self.server, "specs", None)
+            if specs:
+                snap = build_snapshot(self.server.stats, specs=specs,
+                                      n=self.server.n, ci=self.server.ci)
+            else:
+                snap = build_snapshot(self.server.stats,
+                                      n=self.server.n, ci=self.server.ci)
             body = json.dumps(snap, sort_keys=True).encode()
             sig = _hmac_hex(body, self.server.secret) if self.server.secret else None
             envelope = json.dumps({"signature": sig, "payload": snap}).encode()
             self._send(200, envelope)
-        except Exception as exc:  # never leak internals to the client
+        except Exception as exc:  # noqa: BLE001 - must never leak internals to HTTP client
             self._send(500, json.dumps({"error": "internal"}).encode())
             print(f"[props_api] snapshot error: {exc!r}")
 
@@ -94,7 +103,7 @@ def main() -> None:
     server.secret = args.sign_secret
     print(f"PropDesk backend on http://{args.host}:{args.port}")
     print(f"  GET /snapshot  (signed={'yes' if args.sign_secret else 'NO - set --sign-secret'})")
-    print(f"  GET /health")
+    print("  GET /health")
     print(f"  pricing n={args.n}, ci={args.ci}")
     try:
         server.serve_forever()
