@@ -21,9 +21,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
-from nflprops import elite as E, simulator as S
+from nflprops import elite as E
+from nflprops import simulator as S
 
 CACHE = Path(__file__).resolve().parents[0] / "cache"
 
