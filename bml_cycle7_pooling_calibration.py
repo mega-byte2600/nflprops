@@ -51,7 +51,7 @@ def recenter(fit: M.Marginal, target_mean: float) -> M.Marginal:
     if fit.family == "poisson":
         return M.Marginal(fit.stat, fit.family, (t,), fit.p_active, fit.n)
     if fit.family == "nb":
-        r, p = fit.params            # NB mean = r(1-p)/p ; keep r, solve p
+        r, _p = fit.params            # NB mean = r(1-p)/p ; keep r, solve p
         # mean_formula: r*(1-p)/p = t -> p = r/(r+t)
         p2 = r / (r + t)
         return M.Marginal(fit.stat, fit.family, (r, max(1e-6, min(0.999, p2))), fit.p_active, fit.n)
