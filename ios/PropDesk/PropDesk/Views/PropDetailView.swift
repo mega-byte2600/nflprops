@@ -92,11 +92,9 @@ struct PropDetailView: View {
             Text(label).font(.subheadline).foregroundColor(.secondary)
             Spacer(minLength: 8)
             Text(value).font(.subheadline).bold().multilineTextAlignment(.trailing)
+                // VoiceOver reads "62.5 percent", not the symbol (audit, I6).
+                .accessibilityLabel(value.replacingOccurrences(of: "%", with: " percent"))
         }
-        .frame(minHeight: 44)                                   // HIG row height (audit, I6)
-        // One sentence per row for VoiceOver, e.g. "Model P(over): 62.5%" (audit, I6).
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): \(value)")
     }
 
     private var honestyPanel: some View {
