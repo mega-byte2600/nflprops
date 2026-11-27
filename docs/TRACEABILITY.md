@@ -12,6 +12,8 @@ Status: controlled draft 0.1
 | REQ-SCM-001 Controlled change | Executable changes use branch, PR, green gates and human release approval | RISK-DEV-001 | CI result and PR review record |
 | REQ-AGT-001 Bounded agent authority | Agent policy prohibits merge, gate weakening, secret use and out-of-scope changes | RISK-DEV-002 | Review of `AGENTS.md` and PR checklist |
 | REQ-QA-001 Effective assertions | Automated tests must contain meaningful assertions and no unconditional pass bypass | RISK-DEV-003 | `test_pass_weight_drives_composite`; repository search for bypass patterns |
+| REQ-SEC-003 Local unsigned mode | Unsigned HTTP mode may bind only to localhost or a loopback IP | RISK-SEC-003 | `test_unsigned_mode_*` |
+| REQ-SEC-004 Defensive HTTP headers | Every backend response disables caching and MIME sniffing | RISK-SEC-004 | `test_health_endpoint` |
 
 ## Risk register
 
@@ -25,6 +27,8 @@ Status: controlled draft 0.1
 | RISK-DEV-001 | Unreviewed change reaches release branch | High | Branch protection, CI and human merge authority. Repository setting verification remains open. |
 | RISK-DEV-002 | Agent expands scope or weakens evidence to complete a task | High | Repository agent policy, bounded PR scope and human approval for Class C. |
 | RISK-DEV-003 | A test reports success despite not checking its intended behavior | High | Ban unconditional-pass patterns; require numerical acceptance criteria and review. |
+| RISK-SEC-003 | Development configuration exposes unsigned snapshots to a network | High | Reject non-loopback binding whenever unsigned mode is selected. |
+| RISK-SEC-004 | Sensitive or stale responses are cached or content-sniffed | Medium | Send `Cache-Control: no-store` and `X-Content-Type-Options: nosniff` on all responses. |
 
 When a requirement, control, test, or risk changes, update this file in the same
 pull request. A checked box without linked evidence is not verification.

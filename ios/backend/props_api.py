@@ -18,6 +18,7 @@ Fetch: GET /snapshot   -> signed JSON
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +34,22 @@ try:
     from .snapshot_server import _hmac_hex, build_snapshot, validate_runtime_config
 except ImportError:  # pragma: no cover - run directly as a script
     from snapshot_server import _hmac_hex, build_snapshot, validate_runtime_config
+
+
+def validate_server_binding(host: str, *, allow_unsigned: bool) -> None:
+    """Prevent development-only unsigned mode from leaving the local machine."""
+    if not allow_unsigned:
+        return
+    if host == "localhost":
+        return
+    try:
+        if ipaddress.ip_address(host).is_loopback:
+            return
+    except ValueError:
+        pass
+    raise ValueError(
+        "unsigned mode may bind only to localhost or a loopback IP address"
+    )
 
 
 class _ConfigServer(ThreadingHTTPServer):
@@ -54,6 +71,8 @@ class SnapshotHandler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         if body:
             self.wfile.write(body)
@@ -100,6 +119,7 @@ def main() -> None:
     validate_runtime_config(
         args.sign_secret, args.n, args.ci, allow_unsigned=args.allow_unsigned
     )
+    validate_server_binding(args.host, allow_unsigned=args.allow_unsigned)
 
     print(f"loading stats from {args.stats} ...")
     df = load_stats(args.stats)
