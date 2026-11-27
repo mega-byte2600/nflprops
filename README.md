@@ -110,6 +110,15 @@ in the package *requires* one to run, and the client never embeds a key.
   are documented, not hidden.
 - No money-edge claim. Edge is stated relative to the market, never absolute.
 
+## Controlled development
+
+Executable changes follow the incremental lifecycle and human approval gates in
+[`docs/SOFTWARE_LIFECYCLE_PLAN.md`](docs/SOFTWARE_LIFECYCLE_PLAN.md). Requirements,
+risks, and verification evidence are linked in
+[`docs/TRACEABILITY.md`](docs/TRACEABILITY.md); unresolved limitations are kept
+visible in [`docs/KNOWN_ANOMALIES.md`](docs/KNOWN_ANOMALIES.md). AI agents may
+prepare and verify changes but are not authorized to merge or release them.
+
 ## License
 
 MIT. Data: nflverse `player_stats` is CC-BY 4.0.
