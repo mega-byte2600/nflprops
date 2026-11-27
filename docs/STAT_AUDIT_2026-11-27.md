@@ -123,3 +123,22 @@ Corrected 2024–26 results (`docs/audit/latest.json`):
 The edge is real but modest: about a 2% Brier improvement on the strongest naive comparison.
 Per season, receiving yards in 2025 was optimistic (gap −0.043), and passing yards in 2024 had
 no skill. The headline claim in §5 is superseded by this table.
+
+## 7. Second review round: final results (supersede section 6)
+Second verdict: CHANGES (labels only; no blocker). Fixed:
+- the stacked baseline uses a recency-weighted hit rate (the harder baseline);
+- the gate window is built per stat as ADR-0003 says (most recent seasons, pooled to at least
+  1,000 games);
+- the bootstrap uses 1,000 resamples with a per-stat seed, so outcomes do not depend on run
+  order (a 300-resample run had flipped passing yards on Monte Carlo noise).
+
+| stat | gate window | gap [95% CI] | skill vs recalibrated naive | skill vs stacked (EW) | label |
+|---|---|---|---|---|---|
+| rushing_yards | 2025–26 | −0.013 [−0.039, +0.011] | +0.032 [+0.013, +0.051] | +0.017 [+0.002, +0.031] | **decision-grade** |
+| receiving_tds | 2026 | −0.007 [−0.019, +0.006] | +0.027 [+0.017, +0.037] | +0.009 [+0.005, +0.014] | **decision-grade** |
+| receiving_yards | 2026 | −0.004 [−0.033, +0.022] | +0.021 [+0.008, +0.035] | +0.007 [−0.004, +0.018] | modest edge |
+| rushing_tds | 2026 | +0.006 [−0.019, +0.032] | +0.025 [−0.001, +0.052] | −0.002 [−0.012, +0.008] | experimental (narrow miss) |
+| passing_yards | 2024–26 | −0.012 [−0.038, +0.014] | +0.017 [−0.002, +0.034] | +0.004 [−0.007, +0.014] | experimental |
+
+Reproduced identically on two runs. The app shows probabilities for the three passing stats;
+the two experimental stats are labelled as such (ADR-0003, ADR-0008).

@@ -79,7 +79,27 @@ def features(f: pd.DataFrame, h: float, td: bool) -> pd.DataFrame:
     f["line_med"] = gp["y"].transform(lambda s: s.shift(1).rolling(8, min_periods=8).median())
     f["line"] = np.where(td, 0.5, np.floor(f.line_med) + 0.5)
     f["base"] = _baseline(f)
+    f["ew_hit"] = _ew_hit(f, h)
     return f
+
+
+def _ew_hit(f: pd.DataFrame, h: float) -> np.ndarray:
+    """Recency-weighted (half-life h) hit rate at this game's line over ALL prior games,
+    Laplace-smoothed: (sum w*hit + 1) / (sum w + 2). Prior games only."""
+    out = np.empty(len(f))
+    r = 0.5 ** (1.0 / h)
+    y_all, line_all = f.y.to_numpy(), f.line.to_numpy()
+    for pos in f.groupby("player_id").indices.values():
+        y, ln = y_all[pos], line_all[pos]
+        res = np.empty(len(pos))
+        for j in range(len(pos)):
+            if j == 0:
+                res[j] = 0.5
+                continue
+            w = r ** np.arange(j - 1, -1, -1)            # most recent prior game weight 1
+            res[j] = ((w * (y[:j] > ln[j])).sum() + 1.0) / (w.sum() + 2.0)
+        out[pos] = res
+    return out
 
 
 def _baseline(f: pd.DataFrame) -> np.ndarray:
@@ -180,10 +200,11 @@ class Logistic:
 
 
 def stacked_features(loc: pd.DataFrame) -> np.ndarray:
-    """Baseline inputs: logit(prior hit rate), log anchor ratio, log implied total, log n."""
+    """Baseline inputs: logit(recency-weighted prior hit rate), log anchor ratio, log implied
+    total, log n. Uses the EW hit rate (not the last-16 rate) so the baseline is hard to beat."""
     imp = loc.implied.fillna(22.0).clip(lower=1)
     ratio = (loc.implied / loc.ew_imp).replace([np.inf, -np.inf], np.nan).fillna(1.0).clip(0.2, 5)
-    return np.column_stack([logit(np.clip(loc.base, 1e-3, 1 - 1e-3)), np.log(ratio),
+    return np.column_stack([logit(np.clip(loc.ew_hit, 1e-3, 1 - 1e-3)), np.log(ratio),
                             np.log(imp), np.log1p(loc.n_prior)])
 
 

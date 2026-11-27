@@ -27,7 +27,7 @@ GATE_WINDOW = "2024-26"
 GRID_H, GRID_K, GRID_B, GRID_NU = (4, 8, 16, 32), (2, 5, 10, 20), (0.0, 0.5, 1.0), (2, 4, 8, 32)
 
 
-def _boot(r: pd.DataFrame, rng, n: int = 300):
+def _boot(r: pd.DataFrame, rng, n: int = 1000):
     """Player-clustered bootstrap. Tuned parameters and recalibration maps are held fixed,
     so these CIs slightly understate total uncertainty (disclosed in the audit)."""
     groups = list(r.groupby("player_id").indices.values())
@@ -45,7 +45,8 @@ def _boot(r: pd.DataFrame, rng, n: int = 300):
 def run(weeks: pd.DataFrame, implied: pd.DataFrame, seed: int = 2026) -> dict:
     rng = np.random.default_rng(seed)
     out = []
-    for stat in P.STATS:
+    for si, stat in enumerate(P.STATS):
+        rng = np.random.default_rng([seed, si])   # per-stat stream: order-independent CIs
         td = stat in P.TDS
         base_frame = P.frame(weeks, implied, stat)
         best = None
@@ -93,15 +94,33 @@ def run(weeks: pd.DataFrame, implied: pd.DataFrame, seed: int = 2026) -> dict:
             row["per_season"][str(season)] = {
                 "player_games": len(r), "gap": float(r.y1.mean() - r.p.mean()),
                 "skill_vs_naive_cal": 1 - P.brier(r.p, r.y1) / P.brier(r.base_cal, r.y1)}
-        g = row[GATE_WINDOW]
+        # ADR-0003 window: the most recent seasons, pooled per stat until >= 1000 player-games
+        win, n = [], 0
+        for season in sorted(loc.season.unique(), reverse=True):
+            if season in VALID or n >= 1000:
+                break
+            win.append(int(season))
+            n += int((loc.season == season).sum())
+        r = loc[loc.season.isin(win)].reset_index(drop=True)
+        gap_ci, cal_ci, stk_ci = _boot(r, rng)
+        g = {"seasons": sorted(win), "player_games": len(r), "players": int(r.player_id.nunique()),
+             "gap": float(r.y1.mean() - r.p.mean()), "gap_ci95": gap_ci,
+             "skill_vs_naive_cal": 1 - P.brier(r.p, r.y1) / P.brier(r.base_cal, r.y1),
+             "skill_vs_naive_cal_ci95": cal_ci,
+             "skill_vs_stacked": 1 - P.brier(r.p, r.y1) / P.brier(r.base_stk, r.y1),
+             "skill_vs_stacked_ci95": stk_ci}
+        row["gate_window"] = g
         calibrated = (g["gap_ci95"][0] <= 0 <= g["gap_ci95"][1]) or abs(g["gap"]) <= 0.02
         row["gate"] = "PASS" if (calibrated and g["skill_vs_naive_cal_ci95"][0] > 0
                                  and g["players"] >= 50 and g["player_games"] >= 1000) else "FAIL"
         row["beats_stacked_baseline"] = bool(g["skill_vs_stacked_ci95"][0] > 0)
+        row["label"] = ("decision-grade" if row["gate"] == "PASS" and row["beats_stacked_baseline"]
+                        else "modest edge" if row["gate"] == "PASS" else "experimental")
         out.append(row)
     return {"as_of": date.today().isoformat(), "model": "projection-v2",
             "validation": list(VALID), "tests": {k: list(v) for k, v in TESTS.items()},
-            "gate_window": GATE_WINDOW, "stats": out}
+            "gate_window": "per stat: most recent seasons pooled to >= 1000 player-games (ADR-0003)",
+            "stats": out}
 
 
 def main(argv=None) -> int:
@@ -135,7 +154,13 @@ def main(argv=None) -> int:
     for r in res["stats"]:
         ps = " ".join(f"{k}: n={v['player_games']} gap={v['gap']:+.3f} skill={v['skill_vs_naive_cal']:+.3f}"
                       for k, v in r["per_season"].items())
-        print(f"  {r['stat']:16s} gate {r['gate']}  beats stacked: {r['beats_stacked_baseline']}  | {ps}")
+        g = r["gate_window"]
+        f2 = "[{:+.3f},{:+.3f}]".format
+        print(f"  {r['stat']:16s} {r['gate']} -> {r['label']:14s} window {g['seasons']} n={g['player_games']}"
+              f" gap={g['gap']:+.3f} {f2(*g['gap_ci95'])} skill_naive={g['skill_vs_naive_cal']:+.3f}"
+              f" {f2(*g['skill_vs_naive_cal_ci95'])} skill_stacked={g['skill_vs_stacked']:+.3f}"
+              f" {f2(*g['skill_vs_stacked_ci95'])}")
+        print(f"      per season: {ps}")
         print("      "
               + json.dumps({k: (round(v, 3) if isinstance(v, float) else v)
                             for k, v in r["params"].items()}))
