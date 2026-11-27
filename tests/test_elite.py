@@ -67,8 +67,14 @@ def test_pass_weight_drives_composite():
     r = E.ratings(df)
     # heavier pass weight should push composite toward pass EPA (0.08)
     high_w = E.ratings(df, pass_weight=0.90)
-    assert abs(high_w["dropback_efficiency"].mean() - 0.08) < \
-           abs(r["dropback_efficiency"].mean() - 0.08) or True  # just structural
+    assert abs(high_w["dropback_efficiency"].mean() - 0.08) < abs(
+        r["dropback_efficiency"].mean() - 0.08
+    )
+    np.testing.assert_allclose(
+        high_w["dropback_efficiency"],
+        high_w["pass_epa_per_play"] * 0.90
+        + high_w["rush_epa_per_play"] * 0.10,
+    )
 
 
 def test_defense_strength_inverts_allowed():

@@ -30,9 +30,9 @@ from nflprops import load_stats
 # sibling import that works both when run as a script (ios/backend/) and when
 # imported from the test suite
 try:
-    from .snapshot_server import _hmac_hex, build_snapshot
+    from .snapshot_server import _hmac_hex, build_snapshot, validate_runtime_config
 except ImportError:  # pragma: no cover - run directly as a script
-    from snapshot_server import _hmac_hex, build_snapshot
+    from snapshot_server import _hmac_hex, build_snapshot, validate_runtime_config
 
 
 class _ConfigServer(ThreadingHTTPServer):
@@ -89,9 +89,17 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--sign-secret", default=os.environ.get("SNITCH_SECRET", ""))
+    ap.add_argument(
+        "--allow-unsigned", action="store_true",
+        help="local development only: serve unsigned snapshots",
+    )
     ap.add_argument("--ci", type=float, default=0.95)
     ap.add_argument("--n", type=int, default=15000)
     args = ap.parse_args()
+
+    validate_runtime_config(
+        args.sign_secret, args.n, args.ci, allow_unsigned=args.allow_unsigned
+    )
 
     print(f"loading stats from {args.stats} ...")
     df = load_stats(args.stats)

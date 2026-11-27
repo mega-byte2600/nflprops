@@ -2,6 +2,7 @@
 import json
 
 import pandas as pd
+import pytest
 
 from ios.backend import snapshot_server as ss
 
@@ -70,3 +71,21 @@ def test_snapshot_signing_roundtrip():
     assert sig == want
     # wrong secret must NOT verify
     assert sig != hmac.new(b"wrong", body, hashlib.sha256).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("secret", "n", "ci", "message"),
+    [
+        ("", 20000, 0.95, "signing secret is required"),
+        ("too-short", 20000, 0.95, "at least 32 bytes"),
+        ("x" * 32, 999, 0.95, "n must be at least 1000"),
+        ("x" * 32, 20000, 1.0, "ci must be strictly between 0 and 1"),
+    ],
+)
+def test_runtime_config_rejects_unsafe_values(secret, n, ci, message):
+    with pytest.raises(ValueError, match=message):
+        ss.validate_runtime_config(secret, n, ci)
+
+
+def test_runtime_config_allows_explicit_unsigned_local_mode():
+    ss.validate_runtime_config("", 1000, 0.95, allow_unsigned=True)
