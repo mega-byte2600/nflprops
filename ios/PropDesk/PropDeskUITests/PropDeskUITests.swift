@@ -45,11 +45,24 @@ final class PropDeskUITests: XCTestCase {
         tour(launch(contentSize: "UICTContentSizeCategoryAccessibilityXXXL"), label: "AX5")
     }
 
+    /// Runs Apple's audit. Real accessibility issues are reported as test failures by the
+    /// audit itself and are never retried. Only the infrastructure error "Audit failed to
+    /// complete in time" (code -56, seen on a loaded CI simulator) gets one retry.
+    @available(iOS 17.0, *)
+    private func audit(_ app: XCUIApplication) throws {
+        do {
+            try app.performAccessibilityAudit()
+        } catch let error as NSError
+            where error.domain == "com.apple.xcode.xctest.accessibilityAudit" && error.code == -56 {
+            try app.performAccessibilityAudit()
+        }
+    }
+
     func testAccessibilityAuditListScreen() throws {
         guard #available(iOS 17.0, *) else { throw XCTSkip("performAccessibilityAudit needs iOS 17") }
         let app = launch(contentSize: nil)
         XCTAssertTrue(app.navigationBars["Prop Desk"].waitForExistence(timeout: 10))
-        try app.performAccessibilityAudit()
+        try audit(app)
     }
 
     func testAccessibilityAuditDetailScreen() throws {
@@ -57,6 +70,6 @@ final class PropDeskUITests: XCTestCase {
         let app = launch(contentSize: nil)
         XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 10))
         app.cells.firstMatch.tap()
-        try app.performAccessibilityAudit()
+        try audit(app)
     }
 }
