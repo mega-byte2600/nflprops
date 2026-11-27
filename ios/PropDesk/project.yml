@@ -54,12 +54,26 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.emporion.propdesk.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PropDesk.app/PropDesk"
         BUNDLE_LOADER: "$(TEST_HOST)"
+  PropDeskUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PropDeskUITests
+    dependencies:
+      - target: PropDesk
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.emporion.propdesk.uitests
+        TEST_TARGET_NAME: PropDesk
 schemes:
   PropDesk:
     build:
       targets:
         PropDesk: all
         PropDeskTests: [test]
+        PropDeskUITests: [test]
     test:
       targets:
         - PropDeskTests
+        - PropDeskUITests
