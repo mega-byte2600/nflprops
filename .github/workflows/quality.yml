@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Pin the image: ubuntu-latest (26.04 as of 2026-11-27) does not provide
+    # CPython 3.9, which is still the package's declared minimum version.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
