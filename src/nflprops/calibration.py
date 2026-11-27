@@ -29,6 +29,8 @@ def randomized_pit(fit: M.Marginal, y: np.ndarray, rng: np.random.Generator) -> 
     including at the zero atom and for integer counts, where the plain u = F(y) is not.
     """
     y = np.asarray(y, dtype=float)
+    if fit.family not in DISCRETE_FAMILIES:
+        y = np.maximum(y, 0.0)   # the simulator clips at 0; a -3 yard game is the zero atom
     hi = M.mixture_cdf(fit, y)
     if fit.family in DISCRETE_FAMILIES:
         lo = M.mixture_cdf(fit, y - 1)

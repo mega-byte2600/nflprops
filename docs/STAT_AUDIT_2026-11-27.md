@@ -96,3 +96,30 @@ current season. It does **not** show an edge over sportsbook prices: those lines
 more information than a historical median. Edge claims need real prop prices (ADR-0004, O4).
 The closing total is known at kickoff, so the anchor is valid for decisions made near
 kickoff; earlier decisions should use the opening total (a known, small optimism).
+
+## 6. Independent review (`/stat-rigor`, separate agent) and corrected results
+**Verdict: CHANGES, no blocker.** The reviewer found no leakage (a perturbation test changed
+nothing at or before the perturbed game), confirmed the math, and reproduced every number. It
+raised five findings:
+1. The baseline was not recalibrated like the model, which inflated skill by 27–63%.
+   **Fixed:** the baseline now gets the same held-out Platt fit, and a stacked baseline is added.
+2. The gate pooled 2024–26 while the ADR said "latest season". **Fixed:** ADR-0003 is amended
+   (a pooled latest window of at least 1,000 games, with per-season results reported).
+3. Negative rushing yards scored u = 0 in the randomized PIT. **Fixed:** they are clipped to
+   the zero atom, as the simulator does, with a synthetic test.
+4. The EW effective n overstated the Kish value. **Fixed:** the exact formula is used, with a test.
+5. Bootstrap CIs hold the tuned parameters fixed. **Disclosed** above.
+
+Corrected 2024–26 results (`docs/audit/latest.json`):
+
+| stat | gap [95% CI] | skill vs recalibrated naive [95% CI] | skill vs stacked [95% CI] | gate |
+|---|---|---|---|---|
+| passing_yards | −0.012 [−0.037, +0.014] | +0.017 [−0.005, +0.033] | +0.015 [−0.003, +0.030] | **FAIL**: experimental |
+| rushing_yards | +0.000 [−0.022, +0.019] | +0.027 [+0.011, +0.042] | +0.018 [+0.002, +0.031] | PASS |
+| receiving_yards | −0.013 [−0.028, +0.000] | +0.019 [+0.012, +0.027] | +0.014 [+0.006, +0.021] | PASS |
+| rushing_tds | −0.002 [−0.014, +0.012] | +0.019 [+0.009, +0.028] | +0.014 [+0.005, +0.023] | PASS |
+| receiving_tds | −0.007 [−0.013, −0.001] | +0.017 [+0.012, +0.023] | +0.012 [+0.007, +0.017] | PASS |
+
+The edge is real but modest: about a 2% Brier improvement on the strongest naive comparison.
+Per season, receiving yards in 2025 was optimistic (gap −0.043), and passing yards in 2024 had
+no skill. The headline claim in §5 is superseded by this table.

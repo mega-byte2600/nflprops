@@ -47,12 +47,25 @@ is consistent with regression to the mean.
    its CI is above zero.
 
 ## Decision: the calibration gate (what the app may show as decision-grade)
-A stat is decision-grade in a snapshot only if, on the latest rolling-origin test season,
-**all** of the following hold:
+*Amended 2026-11-27 after independent review: a pooled latest window, a recalibrated baseline,
+and a skill CI rule.*
+
+The test window is the **most recent seasons pooled until it holds at least 1,000 player-games**
+(QB passing yards cannot reach 1,000 in one season). Parameters and recalibration maps are tuned
+only on earlier seasons. Per-season results inside the window are reported alongside it.
+A stat is decision-grade in a snapshot only if, on that window, **all** of the following hold:
 - the gap between predicted and realized hit rate has a 95% player-clustered CI containing 0,
   or |gap| ≤ 0.02;
-- the Brier skill score against the naive baseline is above 0;
+- the **lower bound** of the 95% CI of the Brier skill score is above 0, against the naive
+  baseline **recalibrated the same way as the model** (held-out Platt on the same validation
+  seasons). Comparing a recalibrated model with an uncalibrated baseline inflates skill;
 - there are at least 50 players and 1,000 player-games.
+
+Skill against a stronger **stacked baseline** (a logistic regression on the prior hit rate, the
+market anchor ratio, the implied total and the sample size, fit on the validation seasons) is
+reported too. A stat that passes the gate but not the stacked comparison is labelled "modest
+edge". Bootstrap CIs hold the tuned parameters fixed, so they slightly understate uncertainty,
+and reports say so.
 
 A stat that fails is not shown with a probability, or is shown only behind an "experimental"
 label. The snapshot carries each stat's gate result and the audit's as-of date.

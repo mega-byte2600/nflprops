@@ -28,14 +28,18 @@ GRID_H, GRID_K, GRID_B, GRID_NU = (4, 8, 16, 32), (2, 5, 10, 20), (0.0, 0.5, 1.0
 
 
 def _boot(r: pd.DataFrame, rng, n: int = 300):
+    """Player-clustered bootstrap. Tuned parameters and recalibration maps are held fixed,
+    so these CIs slightly understate total uncertainty (disclosed in the audit)."""
     groups = list(r.groupby("player_id").indices.values())
-    gaps, skills = [], []
+    gaps, s_cal, s_stk = [], [], []
     for _ in range(n):
         idx = np.concatenate([groups[i] for i in rng.integers(0, len(groups), len(groups))])
         s = r.iloc[idx]
         gaps.append(s.y1.mean() - s.p.mean())
-        skills.append(1 - P.brier(s.p, s.y1) / P.brier(s.base, s.y1))
-    return np.percentile(gaps, [2.5, 97.5]), np.percentile(skills, [2.5, 97.5])
+        s_cal.append(1 - P.brier(s.p, s.y1) / P.brier(s.base_cal, s.y1))
+        s_stk.append(1 - P.brier(s.p, s.y1) / P.brier(s.base_stk, s.y1))
+    pct = lambda a: [float(x) for x in np.percentile(a, [2.5, 97.5])]
+    return pct(gaps), pct(s_cal), pct(s_stk)
 
 
 def run(weeks: pd.DataFrame, implied: pd.DataFrame, seed: int = 2026) -> dict:
@@ -63,25 +67,37 @@ def run(weeks: pd.DataFrame, implied: pd.DataFrame, seed: int = 2026) -> dict:
         val = loc[loc.season.isin(VALID)]
         cal = P.Platt(val.p_raw.to_numpy(), val.y1.to_numpy())
         loc["p"] = cal(loc.p_raw.to_numpy())
+        # Baselines get the SAME held-out treatment as the model (review finding 1):
+        bcal = P.Platt(val.base.to_numpy(), val.y1.to_numpy())
+        loc["base_cal"] = bcal(loc.base.to_numpy())
+        stk = P.Logistic(P.stacked_features(val), val.y1.to_numpy())
+        loc["base_stk"] = stk(P.stacked_features(loc))
         row = {"stat": stat, "params": {"h": h, "k": k, "beta": b, "nu": nu, "disp": disp,
                                         "platt_a": float(cal.a), "platt_b": float(cal.b)}}
         for name, seasons in TESTS.items():
             r = loc[loc.season.isin(seasons)].reset_index(drop=True)
-            gap_ci, bss_ci = _boot(r, rng)
-            gap = float(r.y1.mean() - r.p.mean())
-            bss = 1 - P.brier(r.p, r.y1) / P.brier(r.base, r.y1)
-            bss_raw = 1 - P.brier(r.p_raw, r.y1) / P.brier(r.base, r.y1)
+            gap_ci, cal_ci, stk_ci = _boot(r, rng)
             row[name] = {"player_games": len(r), "players": int(r.player_id.nunique()),
-                         "pred": float(r.p.mean()), "actual": float(r.y1.mean()), "gap": gap,
-                         "gap_ci95": [float(x) for x in gap_ci], "brier": P.brier(r.p, r.y1),
-                         "brier_baseline": P.brier(r.base, r.y1), "brier_skill": float(bss),
-                         "brier_skill_ci95": [float(x) for x in bss_ci],
-                         "brier_skill_before_platt": float(bss_raw)}
+                         "pred": float(r.p.mean()), "actual": float(r.y1.mean()),
+                         "gap": float(r.y1.mean() - r.p.mean()), "gap_ci95": gap_ci,
+                         "brier": P.brier(r.p, r.y1),
+                         "skill_vs_naive_cal": 1 - P.brier(r.p, r.y1) / P.brier(r.base_cal, r.y1),
+                         "skill_vs_naive_cal_ci95": cal_ci,
+                         "skill_vs_stacked": 1 - P.brier(r.p, r.y1) / P.brier(r.base_stk, r.y1),
+                         "skill_vs_stacked_ci95": stk_ci,
+                         "skill_vs_naive_uncalibrated":
+                             1 - P.brier(r.p, r.y1) / P.brier(r.base, r.y1)}
+        row["per_season"] = {}
+        for season in TESTS[GATE_WINDOW]:
+            r = loc[loc.season == season]
+            row["per_season"][str(season)] = {
+                "player_games": len(r), "gap": float(r.y1.mean() - r.p.mean()),
+                "skill_vs_naive_cal": 1 - P.brier(r.p, r.y1) / P.brier(r.base_cal, r.y1)}
         g = row[GATE_WINDOW]
         calibrated = (g["gap_ci95"][0] <= 0 <= g["gap_ci95"][1]) or abs(g["gap"]) <= 0.02
-        row["gate"] = "PASS" if (calibrated and g["brier_skill"] > 0 and g["players"] >= 50
-                                 and g["player_games"] >= 1000) else "FAIL"
-        row["skill_ci_excludes_zero"] = bool(g["brier_skill_ci95"][0] > 0)
+        row["gate"] = "PASS" if (calibrated and g["skill_vs_naive_cal_ci95"][0] > 0
+                                 and g["players"] >= 50 and g["player_games"] >= 1000) else "FAIL"
+        row["beats_stacked_baseline"] = bool(g["skill_vs_stacked_ci95"][0] > 0)
         out.append(row)
     return {"as_of": date.today().isoformat(), "model": "projection-v2",
             "validation": list(VALID), "tests": {k: list(v) for k, v in TESTS.items()},
@@ -106,17 +122,21 @@ def main(argv=None) -> int:
     res = run(weeks, implied)
     for name in TESTS:
         print(f"\nTest {name} (tuned + recalibrated on {VALID[0]}-{VALID[-1]} only):")
-        rows = [{"stat": r["stat"], "games": r[name]["player_games"],
-                 "players": r[name]["players"], "pred": r[name]["pred"],
+        f = "[{:+.3f},{:+.3f}]".format
+        rows = [{"stat": r["stat"], "games": r[name]["player_games"], "pred": r[name]["pred"],
                  "actual": r[name]["actual"], "gap": r[name]["gap"],
-                 "gap_ci95": "[{:+.3f},{:+.3f}]".format(*r[name]["gap_ci95"]),
-                 "skill": r[name]["brier_skill"],
-                 "skill_ci95": "[{:+.3f},{:+.3f}]".format(*r[name]["brier_skill_ci95"]),
-                 "skill_raw": r[name]["brier_skill_before_platt"]} for r in res["stats"]]
+                 "gap_ci95": f(*r[name]["gap_ci95"]),
+                 "skill_naive_cal": r[name]["skill_vs_naive_cal"],
+                 "ci95": f(*r[name]["skill_vs_naive_cal_ci95"]),
+                 "skill_stacked": r[name]["skill_vs_stacked"],
+                 "ci95_stk": f(*r[name]["skill_vs_stacked_ci95"])} for r in res["stats"]]
         print(pd.DataFrame(rows).round(3).to_string(index=False))
     print("\nParams + gate (" + GATE_WINDOW + "):")
     for r in res["stats"]:
-        print(f"  {r['stat']:16s} {r['gate']}  skill CI>0: {r['skill_ci_excludes_zero']}  "
+        ps = " ".join(f"{k}: n={v['player_games']} gap={v['gap']:+.3f} skill={v['skill_vs_naive_cal']:+.3f}"
+                      for k, v in r["per_season"].items())
+        print(f"  {r['stat']:16s} gate {r['gate']}  beats stacked: {r['beats_stacked_baseline']}  | {ps}")
+        print("      "
               + json.dumps({k: (round(v, 3) if isinstance(v, float) else v)
                             for k, v in r["params"].items()}))
     if a.json:

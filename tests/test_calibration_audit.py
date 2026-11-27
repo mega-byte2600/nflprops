@@ -69,3 +69,14 @@ def test_count_fits_do_not_double_inflate_zeros():
     fit = fit_player(df, "p", "rushing_tds", "poisson")
     assert fit.p_active == 1.0
     assert abs(over_prob(fit, 0.5) - (y > 0.5).mean()) < 0.05
+
+
+def test_randomized_pit_handles_negative_yards_as_the_zero_atom():
+    from nflprops.calibration import randomized_pit
+    rng = np.random.default_rng(5)
+    n, mu, sd, p_act = 80_000, 20.0, 25.0, 0.9
+    v = rng.normal(mu, sd, n)                          # includes negative yardage games
+    y = np.where(rng.uniform(size=n) < p_act, v, 0.0)  # what the field produces
+    fit = Marginal("rushing_yards", "normal_zinf", (mu, sd), p_act, n)
+    u = randomized_pit(fit, y, rng)
+    assert abs(u.mean() - 0.5) < 0.01

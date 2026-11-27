@@ -4,7 +4,7 @@ Method (ADR-0003; every choice is tuned on validation seasons only and tested la
 1. One-step-ahead: each player-game is predicted only from that player's PRIOR games
    (Hyndman & Athanasopoulos, FPP3 s5.10, rolling origin).
 2. Recency: exponentially weighted moments with half-life h games. With decay r = 0.5^(1/h)
-   the effective sample size of n prior games is min(n, (1+r)/(1-r)) (the EW limit).
+   the Kish effective sample size of n prior games is (1-r^n)(1+r) / ((1-r)(1+r^n)).
 3. Empirical-Bayes shrinkage toward the position mean: m* = (n_eff*m + k*m_pos)/(n_eff + k)
    (Efron & Morris 1975; Gelman et al., BDA3 ch.5). Applied to the active-game mean and to
    P(active).
@@ -73,7 +73,9 @@ def features(f: pd.DataFrame, h: float, td: bool) -> pd.DataFrame:
     f["ew_a"] = _prior_ewm(gp["a"], h)
     f["ew_imp"] = _prior_ewm(gp["implied"], h)
     r = 0.5 ** (1.0 / h)
-    f["n_eff"] = np.minimum(f.n_prior, (1 + r) / (1 - r))
+    rn = r ** f.n_prior.to_numpy(dtype=float)
+    # Kish effective n of weights r^0..r^(n-1): (1-r^n)(1+r) / ((1-r)(1+r^n))
+    f["n_eff"] = (1 - rn) * (1 + r) / ((1 - r) * (1 + rn))
     f["line_med"] = gp["y"].transform(lambda s: s.shift(1).rolling(8, min_periods=8).median())
     f["line"] = np.where(td, 0.5, np.floor(f.line_med) + 0.5)
     f["base"] = _baseline(f)
@@ -158,6 +160,31 @@ class Platt:
 
     def __call__(self, p: np.ndarray) -> np.ndarray:
         return expit(self.a + self.b * logit(np.clip(p, 1e-4, 1 - 1e-4)))
+
+
+class Logistic:
+    """Plain logistic regression by maximum likelihood (used for the stacked baseline)."""
+
+    def __init__(self, X: np.ndarray, y: np.ndarray) -> None:
+        from scipy.optimize import minimize
+        Xc = np.column_stack([np.ones(len(X)), X])
+
+        def nll(w):
+            z = Xc @ w
+            return float(np.mean(np.logaddexp(0, z) - y * z))
+
+        self.w = minimize(nll, np.zeros(Xc.shape[1]), method="L-BFGS-B").x
+
+    def __call__(self, X: np.ndarray) -> np.ndarray:
+        return expit(np.column_stack([np.ones(len(X)), X]) @ self.w)
+
+
+def stacked_features(loc: pd.DataFrame) -> np.ndarray:
+    """Baseline inputs: logit(prior hit rate), log anchor ratio, log implied total, log n."""
+    imp = loc.implied.fillna(22.0).clip(lower=1)
+    ratio = (loc.implied / loc.ew_imp).replace([np.inf, -np.inf], np.nan).fillna(1.0).clip(0.2, 5)
+    return np.column_stack([logit(np.clip(loc.base, 1e-3, 1 - 1e-3)), np.log(ratio),
+                            np.log(imp), np.log1p(loc.n_prior)])
 
 
 def brier(p: np.ndarray, y: np.ndarray) -> float:

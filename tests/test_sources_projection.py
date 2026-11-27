@@ -81,3 +81,11 @@ def test_td_probability_is_near_truth_on_synthetic_poisson():
     loc = P.location(f, "rushing_tds", P.Params(h=16.0, k=2.0, beta=0.0))
     p = P.p_over(loc, "rushing_tds", float("nan"), nu=32.0)
     assert abs(p.mean() - (loc.y > 0.5).mean()) < 0.03
+
+
+def test_effective_sample_size_is_exact_kish():
+    f = P.features(_synthetic(1, 30), 8.0, td=True)
+    r = 0.5 ** (1 / 8.0)
+    n = 23
+    w = r ** np.arange(n)
+    assert abs(f.n_eff.iloc[n] - w.sum() ** 2 / (w ** 2).sum()) < 1e-9
