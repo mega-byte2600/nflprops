@@ -4,6 +4,8 @@ import hmac
 import json
 import threading
 
+import pytest
+
 from ios.backend import props_api as api
 
 
@@ -29,8 +31,10 @@ def test_health_endpoint():
     srv, port = _start()
     try:
         import urllib.request
-        body = urllib.request.urlopen(f"http://127.0.0.1:{port}/health").read()
-        assert json.loads(body) == {"ok": True}
+        response = urllib.request.urlopen(f"http://127.0.0.1:{port}/health")
+        assert json.loads(response.read()) == {"ok": True}
+        assert response.headers["Cache-Control"] == "no-store"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
     finally:
         srv.shutdown(); srv.server_close()
 
@@ -66,3 +70,18 @@ def test_unknown_path_404():
             assert e.code == 404
     finally:
         srv.shutdown(); srv.server_close()
+
+
+@pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "::1"])
+def test_unsigned_mode_accepts_only_loopback_bindings(host):
+    api.validate_server_binding(host, allow_unsigned=True)
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.10", "propdesk.local"])
+def test_unsigned_mode_rejects_non_loopback_bindings(host):
+    with pytest.raises(ValueError, match="unsigned mode may bind only"):
+        api.validate_server_binding(host, allow_unsigned=True)
+
+
+def test_signed_mode_allows_external_binding():
+    api.validate_server_binding("0.0.0.0", allow_unsigned=False)
