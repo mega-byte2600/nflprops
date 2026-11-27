@@ -1,47 +1,65 @@
-{
-  "name": "PropDesk",
-  "configVersion": 3,
-  "objectVersion": 56,
-  "attributes": {
-    "BuildIndependentTargetsInParallel": 1,
-    "LastSwiftUpdateCheck": 1620,
-    "LastUpgradeCheck": 1620
-  },
-  "targets": [
-    {
-      "name": "PropDesk",
-      "type": "application",
-      "platform": "iOS",
-      "deploymentTarget": "16.0",
-      "sources": [
-        "PropDesk/App/PropDeskApp.swift",
-        "PropDesk/Models/Prop.swift",
-        "PropDesk/Models/Snapshot.swift",
-        "PropDesk/Networking/SnapshotClient.swift",
-        "PropDesk/Views/PropListView.swift",
-        "PropDesk/Views/PropDetailView.swift",
-        "PropDesk/Views/SettingsView.swift"
-      ],
-      "settings": {
-        "base": {
-          "PRODUCT_BUNDLE_IDENTIFIER": "com.emporion.propdesk",
-          "GENERATE_INFOPLIST_FILE": true,
-          "INFOPLIST_KEY_UILaunchScreen_Generation": true,
-          "MARKETING_VERSION": "0.1.0",
-          "CURRENT_PROJECT_VERSION": "1",
-          "SWIFT_VERSION": "5.7",
-          "IPHONEOS_DEPLOYMENT_TARGET": "16.0",
-          "TARGETED_DEVICE_FAMILY": "1",
-          "CODE_SIGN_STYLE": "Automatic"
-        }
-      }
-    }
-  ],
-  "schemes": {
-    "PropDesk": {
-      "build": {
-        "targets": { "PropDesk": "all" }
-      }
-    }
-  }
-}
+# XcodeGen spec for Prop Desk (ADR-0006). Generate with: cd ios/PropDesk && xcodegen generate
+name: PropDesk
+options:
+  bundleIdPrefix: com.emporion
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.7"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  PropDesk:
+    type: application
+    platform: iOS
+    sources:
+      - path: PropDesk
+        excludes:
+          - "PrivacyInfo.xcprivacy"
+          - "Assets.xcassets"
+          - "Resources"
+      # Resources (ADR-0006), declared explicitly: asset catalog with AppIcon, the bundled
+      # signed snapshot, and the privacy manifest.
+      - path: PropDesk/Assets.xcassets
+        buildPhase: resources
+      - path: PropDesk/Resources
+        buildPhase: resources
+      - path: PropDesk/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.emporion.propdesk
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Prop Desk
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+  PropDeskTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PropDeskTests
+      - path: PropDesk/Resources/props_snapshot.json
+        buildPhase: resources
+    dependencies:
+      - target: PropDesk
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.emporion.propdesk.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PropDesk.app/PropDesk"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  PropDesk:
+    build:
+      targets:
+        PropDesk: all
+        PropDeskTests: [test]
+    test:
+      targets:
+        - PropDeskTests
