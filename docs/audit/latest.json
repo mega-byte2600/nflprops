@@ -1,0 +1,106 @@
+{
+ "as_of": "2026-11-27",
+ "test_seasons": [
+  2022,
+  2023
+ ],
+ "train": "seasons < 2022",
+ "td_single_inflation": false,
+ "gate_thresholds": {
+  "max_abs_gap": 0.02,
+  "min_players": 50,
+  "min_games": 1000
+ },
+ "stats": [
+  {
+   "stat": "passing_yards",
+   "player_games": 1022,
+   "players": 59,
+   "published_mean_u": 0.4581954418613559,
+   "randomized_mean_u": 0.47539496065010933,
+   "pred_p_over": 0.48601795962717675,
+   "actual_hit": 0.4628180039138943,
+   "gap": -0.023199955713282427,
+   "gap_ci95": [
+    -0.08400155333236152,
+    0.03826479182447838
+   ],
+   "brier": 0.2507249705174594,
+   "brier_baseline": 0.24980752270531248,
+   "brier_skill": -0.003672618831536134,
+   "gate": "FAIL"
+  },
+  {
+   "stat": "rushing_yards",
+   "player_games": 3647,
+   "players": 181,
+   "published_mean_u": 0.3408036189724734,
+   "randomized_mean_u": 0.44435298896606684,
+   "pred_p_over": 0.4405307438167474,
+   "actual_hit": 0.3731834384425555,
+   "gap": -0.06734730537419187,
+   "gap_ci95": [
+    -0.09752602900587624,
+    -0.036307882284835044
+   ],
+   "brier": 0.22282019185930657,
+   "brier_baseline": 0.22624491330261293,
+   "brier_skill": 0.015137230682068958,
+   "gate": "FAIL"
+  },
+  {
+   "stat": "receiving_yards",
+   "player_games": 6077,
+   "players": 293,
+   "published_mean_u": 0.4005986163810563,
+   "randomized_mean_u": 0.4683783851211875,
+   "pred_p_over": 0.4881783986336441,
+   "actual_hit": 0.4543360210630245,
+   "gap": -0.033842377570619586,
+   "gap_ci95": [
+    -0.05827358008826139,
+    -0.006739470041258736
+   ],
+   "brier": 0.2506868916648038,
+   "brier_baseline": 0.24939735282012332,
+   "brier_skill": -0.005170619616041261,
+   "gate": "FAIL"
+  },
+  {
+   "stat": "rushing_tds",
+   "player_games": 1235,
+   "players": 58,
+   "published_mean_u": 0.7618935767663864,
+   "randomized_mean_u": 0.5737320756431386,
+   "pred_p_over": 0.11634939914265004,
+   "actual_hit": 0.2736842105263158,
+   "gap": 0.15733481138366578,
+   "gap_ci95": [
+    0.11530033482449513,
+    0.1958941039585011
+   ],
+   "brier": 0.21540726642067126,
+   "brier_baseline": 0.19252864720055224,
+   "brier_skill": -0.11883228575478921,
+   "gate": "FAIL"
+  },
+  {
+   "stat": "receiving_tds",
+   "player_games": 2200,
+   "players": 101,
+   "published_mean_u": 0.7799777658044887,
+   "randomized_mean_u": 0.5739519505187716,
+   "pred_p_over": 0.09492057421488985,
+   "actual_hit": 0.22818181818181818,
+   "gap": 0.13326124396692834,
+   "gap_ci95": [
+    0.11388943444994673,
+    0.15243476913429363
+   ],
+   "brier": 0.18706744112624732,
+   "brier_baseline": 0.17449539611398382,
+   "brier_skill": -0.07204800408631518,
+   "gate": "FAIL"
+  }
+ ]
+}
