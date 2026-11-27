@@ -58,7 +58,9 @@ A change is done only when the gates relevant to it pass, and their output is pa
 | **Any change to a probability, model, fit, simulation or calibration** | `/kickoff` → `/build` → **`/stat-rigor review`** (blocking, independent) → `/review` |
 | A number goes into README, docs or app copy | `/stat-rigor claim` |
 | Snapshot schema, signing, or the Python↔Swift boundary | `/snapshot-contract` → `/review` |
-| iOS UI or project change | `/build` (XCTest) → `/ios-testflight check` → `/review` |
+| **Any screen, flow, chart or copy in the app** | **`/ios-ux design <screen>`** → `/build` (XCTest + previews) → **`/ios-ux review`** → `/ios-testflight check` → `/review` |
+| iOS project or build change | `/build` (XCTest) → `/ios-testflight check` → `/review` |
+| Before each TestFlight build, or after testers report | `/ios-ux test` (5-tester round, SUS ≥ 75) |
 | Data source or odds-provider work | `/carpedata onboard <source>` → `/review`; the owner approves keys |
 | Release candidate for TestFlight | `/ios-testflight release` → `/ship` (the owner archives and uploads) |
 | Before any push or PR | `/review` |

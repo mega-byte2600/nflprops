@@ -49,6 +49,31 @@ gained in the audit before it is used.
 /ios-testflight release, then /ship. Give me the exact upload steps for my Mac.
 ```
 
+## 6b. UI/UX (evidence-based iPhone design)
+Design a screen before building it:
+```
+/ios-ux design <This Week | Prop detail | Search | Method>. Follow ADR-0008: the answer first
+as a natural frequency, a 20-dot quantile dotplot, freshness always visible, every state
+designed, Dynamic Type at AX5, VoiceOver sentences. Then /build it with SwiftUI previews for
+default, AX5 and dark, and open a PR with screenshots.
+```
+Review the UI before every TestFlight build:
+```
+/ios-ux review <PR>. Score every screen on Nielsen's 10 heuristics and the ADR-0008
+non-negotiables from the CI screenshots (default and AX5, light and dark); run the
+accessibility audit; severity 3-4 blocks. Post the table on the PR.
+```
+Plan a tester round:
+```
+/ios-ux test. Write the 5-tester round plan (3 tasks, success criteria, SUS), and after the
+round turn the top 3 findings into backlog items with evidence.
+```
+Loop the UI to done:
+```
+/loop /mvp-loop, prioritising I-items, and run /ios-ux design before and /ios-ux review after
+each one.
+```
+
 ## 7. Parallel lanes (one session each; they never edit the same files)
 Model engineer:
 ```
@@ -66,7 +91,7 @@ Touch only ios/backend, tests and the fixtures. PR plus /review.
 iOS engineer:
 ```
 You are the iOS engineer. Take the next todo I-item in docs/MVP_PLAN.md. Follow ADR-0005,
-0006 and 0007. Builds are verified only by the macOS CI job. Touch only ios/PropDesk and
+0006, 0007 and 0008; /ios-ux design first and /ios-ux review last. Builds are verified only by the macOS CI job. Touch only ios/PropDesk and
 .github/workflows. /ios-testflight check, then a PR with screenshots.
 ```
 

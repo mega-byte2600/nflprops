@@ -12,3 +12,4 @@ Superseded. Agents follow Accepted ADRs and may propose new ones. Only the owner
 | [0005](ADR-0005-mvp-scope-testflight.md) | MVP scope for TestFlight | Proposed |
 | [0006](ADR-0006-ios-build-and-release-pipeline.md) | iOS build verification in CI; the owner archives and uploads | Proposed |
 | [0007](ADR-0007-app-store-compliance-posture.md) | App Store and content compliance posture | Proposed |
+| [0008](ADR-0008-ux-information-architecture-and-flows.md) | UX: three-tab IA, prop detail flow, natural frequencies + quantile dotplots, accessibility, SUS metrics | Proposed |

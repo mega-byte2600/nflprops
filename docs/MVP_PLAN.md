@@ -44,7 +44,10 @@ An item is done only when its acceptance criteria are shown by command output in
 | I1 | `project.yml`: resources (`Assets.xcassets` + 1024 `AppIcon`, bundled snapshot, `PrivacyInfo.xcprivacy`) and a `PropDeskTests` target | O1 | `mvp_gate.py` iOS rows pass | todo |
 | I2 | macOS CI job: `xcodegen` + `xcodebuild build test` on a simulator, unsigned | I1 | The job is green on the PR | todo |
 | I3 | Swift Ed25519 verification (CryptoKit) with the public key only; reject unknown MAJOR; fetch a newer snapshot and cache the last verified one | B2, I2 | XCTest: the golden file verifies; tampered, unknown `key_id` and unknown MAJOR fail | todo |
-| I4 | UI per ADR-0005: sort by player/stat, line-source label, experimental label, quantile chart, Method screen (calibration table, nflverse CC-BY-4.0 attribution, 1-800-GAMBLER) | I3, S5 | XCTest/UI test; `mvp_gate.py` copy rows pass; screenshots in the PR | todo |
+| I4 | UI per ADR-0005 and ADR-0008: three tabs (This Week by game, Search, Method), natural-frequency answer, 20-dot quantile dotplot, line-source label, experimental label, Method screen (calibration table, nflverse CC-BY-4.0 attribution, 1-800-GAMBLER) | I3, S5 | XCTest/UI test; `mvp_gate.py` copy rows pass; screenshots in the PR | todo |
+| I6 | XCUITest screenshots (default and AX5, light and dark) as CI artifacts, plus the accessibility audit test | I2 | Artifacts on the PR; the audit test passes | todo |
+| U1 | `/ios-ux review` of all four screens; no severity 3–4 issues | I4, I6 | The review table is posted on the PR | todo |
+| U2 | First 5-tester TestFlight round (`/ios-ux test`): SUS ≥ 75, task success ≥ 90%, comprehension ≥ 80% | R2 | The findings doc is in `docs/ux/` | owner |
 | I5 | Accessibility and quality: Dynamic Type at the largest size, VoiceOver labels, dark mode, no crash on an empty or stale snapshot | I4 | XCTest plus screenshots at the accessibility size | todo |
 
 ## M4: release (Release)
