@@ -140,5 +140,7 @@ Second verdict: CHANGES (labels only; no blocker). Fixed:
 | rushing_tds | 2026 | +0.006 [−0.019, +0.032] | +0.025 [−0.001, +0.052] | −0.002 [−0.012, +0.008] | experimental (narrow miss) |
 | passing_yards | 2024–26 | −0.012 [−0.038, +0.014] | +0.017 [−0.002, +0.034] | +0.004 [−0.007, +0.014] | experimental |
 
-Reproduced identically on two runs. The app shows probabilities for the three passing stats;
-the two experimental stats are labelled as such (ADR-0003, ADR-0008).
+Reproduced identically on two runs. **Planned (backlog S5, not yet implemented):** the
+snapshot will carry these labels, so the app shows probabilities only for the three stats that
+pass the gate and labels the two experimental stats as such (ADR-0003; the display rules are
+ADR-0008, in PR #3).
