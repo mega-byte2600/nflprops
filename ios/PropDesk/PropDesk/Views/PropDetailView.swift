@@ -81,17 +81,21 @@ struct PropDetailView: View {
             if let edge = prop.edge {
                 metricRow("Edge vs fair", String(format: "%+.1f%%", edge * 100))
             } else {
-                metricRow("Edge vs fair", "—")
+                // Spelled out: a lone dash glyph fails contrast and reads as nothing (audit, I6).
+                metricRow("Edge vs fair", "Not available (no market price)")
             }
         }
     }
 
     private func metricRow(_ label: String, _ value: String) -> some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text(label).font(.subheadline).foregroundColor(.secondary)
-            Spacer()
-            Text(value).font(.subheadline).bold()
+            Spacer(minLength: 8)
+            Text(value).font(.subheadline).bold().multilineTextAlignment(.trailing)
         }
+        // One sentence per row for VoiceOver, e.g. "Model P(over): 62.5%" (audit, I6).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label): \(value)")
     }
 
     private var honestyPanel: some View {
@@ -101,8 +105,10 @@ struct PropDetailView: View {
             Text("Raw per-player fits are NOT calibrated (PIT shows this). This is a distribution estimate, not a guaranteed edge. Single-game edge is within noise — judge only over many bets via CLV/calibration.")
                 .font(.footnote)
                 .foregroundColor(.orange)
+                .fixedSize(horizontal: false, vertical: true)
             Text(prop.fairPriceHonestNote)
                 .font(.caption2).foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)   // grow, never clip, at AX sizes
         }
         .padding()
         .background(Color.orange.opacity(0.08))
@@ -119,8 +125,12 @@ struct PropDetailView: View {
                         .font(.subheadline).foregroundColor(.accentColor)
                     Spacer()
                     Image(systemName: showCrossChecks ? "chevron.up" : "chevron.down")
+                        .accessibilityHidden(true)
                 }
+                .frame(maxWidth: .infinity, minHeight: 44)   // HIG 44 pt target (audit, I6)
+                .contentShape(Rectangle())
             }
+            .accessibilityHint(showCrossChecks ? "Hides the cross-check note" : "Shows the cross-check note")
             if showCrossChecks {
                 Text("Cross-check priors refine the player history; the CLOSING LINE is the calibration anchor. A prior alone is weaker than the market (measured: Madden 61.0% SU vs 66.2% closing).")
                     .font(.footnote).foregroundColor(.secondary)
