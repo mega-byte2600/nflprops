@@ -66,3 +66,33 @@ with no shrinkage and no recency weighting.
    as location shifts, again measured.
 4. A post-hoc calibration map (isotonic, or beta for small samples) fit on a held-out season.
 5. Only then: display as decision-grade the stats that pass the ADR-0003 gate.
+
+## 5. Fixes implemented and measured (same day)
+- **v1 engine:** randomized PIT against the sampled mixture (`calibration.randomized_pit`),
+  strictly temporal training in `nflprops calibration`, and count families no longer
+  double-inflated (`p_active = 1.0`). `nflprops calibration` now reports TD mean-u 0.476 and
+  0.473, down from 0.762 and 0.780.
+- **Projection v2** (`src/nflprops/projection.py`): one-step-ahead, recency-weighted (EW
+  half-life), empirical-Bayes shrinkage to the previous season's position mean, anchored to
+  the **free closing-line implied team total**, an out-of-sample predictive dispersion, and
+  Platt recalibration. Everything is tuned and recalibrated on 2019–21 only.
+
+`python scripts/model_v2_eval.py ...` (`docs/audit/latest.json`); player-clustered bootstrap:
+
+| stat | test 2022–23: gap [95% CI] / skill [95% CI] | test 2024–26: gap [95% CI] / skill [95% CI] | gate |
+|---|---|---|---|
+| passing_yards | +0.004 [−0.032, +0.037] / +0.046 [+0.025, +0.066] | −0.012 [−0.037, +0.013] / +0.024 [+0.001, +0.042] | PASS |
+| rushing_yards | −0.011 [−0.038, +0.018] / +0.044 [+0.017, +0.071] | +0.000 [−0.021, +0.019] / +0.041 [+0.020, +0.062] | PASS |
+| receiving_yards | −0.015 [−0.032, +0.000] / +0.025 [+0.012, +0.039] | −0.013 [−0.028, +0.000] / +0.027 [+0.018, +0.038] | PASS |
+| rushing_tds | −0.010 [−0.025, +0.003] / +0.047 [+0.032, +0.063] | −0.002 [−0.014, +0.012] / +0.033 [+0.021, +0.044] | PASS |
+| receiving_tds | −0.009 [−0.017, −0.001] / +0.048 [+0.038, +0.059] | −0.007 [−0.013, −0.001] / +0.047 [+0.039, +0.055] | PASS (\|gap\| ≤ 0.02) |
+
+Tuned market elasticity: beta = 1.0 for TDs, 0.5 for yards. Platt changes the skill by at
+most 0.003, so the model is calibrated before recalibration.
+
+**What this does and does not show.** v2 beats a strong naive baseline (the player's
+last-16 hit rate at a book-style line) and is calibrated out of sample, including the
+current season. It does **not** show an edge over sportsbook prices: those lines embed far
+more information than a historical median. Edge claims need real prop prices (ADR-0004, O4).
+The closing total is known at kickoff, so the anchor is valid for decisions made near
+kickoff; earlier decisions should use the opening total (a known, small optimism).

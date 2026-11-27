@@ -71,13 +71,13 @@ def cmd_list(args):
 
 def cmd_calibration(args):
     df = d.load_stats(args.data)
-    train = df[~df["season"].isin(args.test_seasons)]
+    train = df[df["season"] < min(args.test_seasons)]   # strictly past -> future
     test = df[df["season"].isin(args.test_seasons)]
     tup = tuple((s, d.STAT_FAMILY[s]) for s in
                 ("passing_yards","rushing_yards","receiving_yards",
                  "rushing_tds","receiving_tds"))
     res = pit_backtest(train, test, tup)
-    print("\nPIT calibration backtest (train<test seasons, leakage-free):")
+    print("\nRandomized PIT backtest (train on seasons before the test seasons):")
     print(res.to_string(index=False))
     print("\nHonest read: a CALIBRATED stat has mean_u~0.5 and KS-p>0.05. Raw fits")
     print("are generally NOT calibrated - use this to decide where to trust the engine.")
