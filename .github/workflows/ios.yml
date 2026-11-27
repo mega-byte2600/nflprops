@@ -53,6 +53,19 @@ jobs:
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -resultBundlePath "$RUNNER_TEMP/PropDesk.xcresult" \
             CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Export screenshots from the result bundle
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/screenshots"
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/PropDesk.xcresult" \
+            --output-path "$RUNNER_TEMP/screenshots" || echo "attachment export unavailable"
+          ls -la "$RUNNER_TEMP/screenshots" || true
+      - name: Upload screenshots (I6, for /ios-ux review)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: ${{ runner.temp }}/screenshots
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
