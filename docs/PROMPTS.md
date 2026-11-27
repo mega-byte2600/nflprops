@@ -4,6 +4,28 @@ Each prompt is self-contained. Paste it into a Claude Code session opened on thi
 Skills: `/mvp-loop`, `/stat-rigor`, `/carpedata`, `/snapshot-contract`, `/ios-testflight`, plus
 the global `/kickoff`, `/build`, `/review` and `/ship`. Rules: `CLAUDE.md`. Decisions: `docs/adr/`.
 
+## 0. Ship it (voice-friendly)
+Say or type any of these: **"ship it"**, **"push it"**, **"do it"**, **"send it"**, **"merge it"**.
+That runs `/ship-it`: every routine green PR merges in stack order, and only the needs-owner
+list comes back to you. To run it as a loop:
+```
+/loop 30m /ship-it
+```
+**One-time setup (you add this yourself; Claude may not grant itself permissions).** Create
+`.claude/settings.json` in this repo (on GitHub: Add file, then Create new file), or add these
+lines to your own `~/.claude/settings.json`:
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api -X PUT repos/mega-byte2600/nflprops/pulls/*/merge*)",
+      "Bash(gh api -X PATCH repos/mega-byte2600/nflprops/pulls/*)"
+    ]
+  }
+}
+```
+It allows merging and retargeting PRs in this repo only. Nothing else changes.
+
 ## 1. Drive the MVP (the main loop)
 ```
 /loop /mvp-loop
