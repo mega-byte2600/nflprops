@@ -93,6 +93,7 @@ struct PropDetailView: View {
             Spacer(minLength: 8)
             Text(value).font(.subheadline).bold().multilineTextAlignment(.trailing)
         }
+        .frame(minHeight: 44)                                   // HIG row height (audit, I6)
         // One sentence per row for VoiceOver, e.g. "Model P(over): 62.5%" (audit, I6).
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(label): \(value)")
@@ -106,9 +107,8 @@ struct PropDetailView: View {
                 .font(.footnote)
                 .foregroundColor(.orange)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(prop.fairPriceHonestNote)
-                .font(.caption2).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)   // grow, never clip, at AX sizes
+            // The snapshot's "no live odds" note is not repeated here: the "Edge vs fair: Not
+            // available (no market price)" row already says it (ADR-0008: one limits sentence).
         }
         .padding()
         .background(Color.orange.opacity(0.08))
