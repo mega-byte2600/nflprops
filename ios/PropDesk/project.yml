@@ -18,7 +18,14 @@ targets:
       - path: PropDesk
         excludes:
           - "PrivacyInfo.xcprivacy"
-      # Resources (ADR-0006): asset catalog (AppIcon), bundled snapshot, privacy manifest.
+          - "Assets.xcassets"
+          - "Resources"
+      # Resources (ADR-0006), declared explicitly: asset catalog with AppIcon, the bundled
+      # signed snapshot, and the privacy manifest.
+      - path: PropDesk/Assets.xcassets
+        buildPhase: resources
+      - path: PropDesk/Resources
+        buildPhase: resources
       - path: PropDesk/PrivacyInfo.xcprivacy
         buildPhase: resources
     settings:
