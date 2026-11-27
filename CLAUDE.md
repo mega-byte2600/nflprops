@@ -47,7 +47,10 @@ A change is done only when the gates relevant to it pass, and their output is pa
    marks (ADR-0007). An odds provider or other paid source is the owner's decision; its keys
    stay server-side.
 6. **Small, reviewable changes:** one backlog item per branch (`<lane>/<item-id>-<slug>`) with
-   a PR to `main`. Never push to `main`, never force-push, and never merge without the owner's yes.
+   a PR to `main`. Never push to `main` directly and never force-push.
+7. **Standing merge instruction (`/ship-it`):** when the owner says "ship it", "push it", "do
+   it", "send it" or "merge it", routine green PRs merge without asking again; only the
+   needs-owner list in `.claude/skills/ship-it/SKILL.md` comes back to the owner.
 
 ## Workflow playbook: use these automatically, in these combinations
 | Situation | Combination |
@@ -58,10 +61,13 @@ A change is done only when the gates relevant to it pass, and their output is pa
 | **Any change to a probability, model, fit, simulation or calibration** | `/kickoff` → `/build` → **`/stat-rigor review`** (blocking, independent) → `/review` |
 | A number goes into README, docs or app copy | `/stat-rigor claim` |
 | Snapshot schema, signing, or the Python↔Swift boundary | `/snapshot-contract` → `/review` |
-| iOS UI or project change | `/build` (XCTest) → `/ios-testflight check` → `/review` |
+| **Any screen, flow, chart or copy in the app** | **`/ios-ux design <screen>`** → `/build` (XCTest + previews) → **`/ios-ux review`** → `/ios-testflight check` → `/review` |
+| iOS project or build change | `/build` (XCTest) → `/ios-testflight check` → `/review` |
+| Before each TestFlight build, or after testers report | `/ios-ux test` (5-tester round, SUS ≥ 75) |
 | Data source or odds-provider work | `/carpedata onboard <source>` → `/review`; the owner approves keys |
 | Release candidate for TestFlight | `/ios-testflight release` → `/ship` (the owner archives and uploads) |
 | Before any push or PR | `/review` |
+| **Owner says "ship it / push it / do it / send it / merge it"** | **`/ship-it`**: merge routine green PRs in stack order; one line per needs-owner item |
 
 ## Loops (ready-to-paste prompts for everything: `docs/PROMPTS.md`)
 - **Driver:** `/loop /mvp-loop`. Self-paced; one backlog item per iteration; stops when

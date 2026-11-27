@@ -83,6 +83,11 @@ def checks() -> list[dict]:
     add("I4", "nflverse CC-BY-4.0 attribution in app", "nflverse" in low and "cc-by" in low)
     add("I4", "responsible-gambling resource in app", "1-800-gambler" in low)
     add("I4", "line source is labelled in app", "illustrative" in low)
+    add("I4", "three-tab IA (ADR-0008)", "TabView" in swift and "NavigationStack" in swift)
+    add("I4", "natural-frequency answer ('in 20')", "in 20" in low)
+    add("I4", "quantile dotplot (ADR-0008)", "dotplot" in low)
+    tests = "\n".join(p.read_text(errors="ignore") for p in (ROOT / "ios").rglob("*Tests*.swift"))
+    add("I6", "accessibility audit test", "performAccessibilityAudit" in tests)
     hits = [w for w in BANNED if re.search(re.escape(w), low + _read("README.md").lower())]
     add("I4", "no banned copy (ADR-0007)", not hits, ", ".join(hits))
     add("R2", "release notes", (ROOT / "ios/RELEASE_NOTES.md").exists())
