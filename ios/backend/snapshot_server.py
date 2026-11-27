@@ -35,6 +35,32 @@ from datetime import datetime, timezone
 from nflprops import Engine
 from nflprops import data as d
 
+MIN_SIGNING_SECRET_BYTES = 32
+
+
+def validate_runtime_config(secret: str, n: int, ci: float,
+                            *, allow_unsigned: bool = False) -> None:
+    """Fail closed on unsafe production configuration.
+
+    Unsigned output remains available only as an explicit local-development
+    choice.  A 32-byte minimum prevents accidentally deploying placeholder or
+    low-entropy secrets; it is not a substitute for secret-manager controls.
+    """
+    if not 0.0 < ci < 1.0:
+        raise ValueError("ci must be strictly between 0 and 1")
+    if n < 1000:
+        raise ValueError("n must be at least 1000")
+    if not secret:
+        if allow_unsigned:
+            return
+        raise ValueError(
+            "signing secret is required; use --allow-unsigned only for local development"
+        )
+    if len(secret.encode("utf-8")) < MIN_SIGNING_SECRET_BYTES:
+        raise ValueError(
+            f"signing secret must be at least {MIN_SIGNING_SECRET_BYTES} bytes"
+        )
+
 
 def _hmac_hex(body: bytes, secret: str) -> str:
     return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
@@ -92,9 +118,17 @@ def main() -> None:
     ap.add_argument("--stats", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--sign-secret", default=os.environ.get("SNITCH_SECRET", ""))
+    ap.add_argument(
+        "--allow-unsigned", action="store_true",
+        help="local development only: emit an unsigned snapshot",
+    )
     ap.add_argument("--ci", type=float, default=0.95)
     ap.add_argument("--n", type=int, default=20000)
     args = ap.parse_args()
+
+    validate_runtime_config(
+        args.sign_secret, args.n, args.ci, allow_unsigned=args.allow_unsigned
+    )
 
     from nflprops import load_stats
     df = load_stats(args.stats)
