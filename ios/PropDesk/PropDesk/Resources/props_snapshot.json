@@ -1,0 +1,84 @@
+{
+  "signature": null,
+  "payload": {
+    "schema_version": "1.0",
+    "generated_utc": "2026-11-27T17:58:04.093222+00:00",
+    "engine": {
+      "ci_default": 0.95,
+      "n_monte_carlo": 20000
+    },
+    "honesty": "distributions + CI only; no guaranteed winners; judged by CLV/calibration over many bets, not short-run ROI",
+    "props": [
+      {
+        "player": "Justin Jefferson",
+        "stat": "receiving_yards",
+        "line": 70.5,
+        "p_over": 0.6218,
+        "mean": 95.5,
+        "median": 85.4,
+        "ci_low": 20.7,
+        "ci_high": 228.6,
+        "ci_level": 0.95,
+        "fair_price_honest_note": "no live odds wired yet (keyless); p_over is model distribution, not a market fair price",
+        "edge": null,
+        "kelly_stake": null
+      },
+      {
+        "player": "Tyreek Hill",
+        "stat": "receiving_yards",
+        "line": 70.5,
+        "p_over": 0.4816,
+        "mean": 78.9,
+        "median": 68.3,
+        "ci_low": 7.0,
+        "ci_high": 208.6,
+        "ci_level": 0.95,
+        "fair_price_honest_note": "no live odds wired yet (keyless); p_over is model distribution, not a market fair price",
+        "edge": null,
+        "kelly_stake": null
+      },
+      {
+        "player": "Derrick Henry",
+        "stat": "rushing_yards",
+        "line": 55.5,
+        "p_over": 0.625,
+        "mean": 86.2,
+        "median": 71.8,
+        "ci_low": 10.6,
+        "ci_high": 241.0,
+        "ci_level": 0.95,
+        "fair_price_honest_note": "no live odds wired yet (keyless); p_over is model distribution, not a market fair price",
+        "edge": null,
+        "kelly_stake": null
+      },
+      {
+        "player": "Patrick Mahomes",
+        "stat": "passing_yards",
+        "line": 275.5,
+        "p_over": 0.557,
+        "mean": 286.0,
+        "median": 285.9,
+        "ci_low": 143.2,
+        "ci_high": 430.6,
+        "ci_level": 0.95,
+        "fair_price_honest_note": "no live odds wired yet (keyless); p_over is model distribution, not a market fair price",
+        "edge": null,
+        "kelly_stake": null
+      },
+      {
+        "player": "A.J. Brown",
+        "stat": "receiving_yards",
+        "line": 65.5,
+        "p_over": 0.4837,
+        "mean": 75.5,
+        "median": 63.6,
+        "ci_low": 7.3,
+        "ci_high": 211.4,
+        "ci_level": 0.95,
+        "fair_price_honest_note": "no live odds wired yet (keyless); p_over is model distribution, not a market fair price",
+        "edge": null,
+        "kelly_stake": null
+      }
+    ]
+  }
+}
