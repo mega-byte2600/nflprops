@@ -43,3 +43,40 @@ def test_perfect_zero_inflated_gamma_scores_calibrated_with_mixture_cdf():
     assert abs(u.mean() - 0.5) < 0.01
     hist, _ = np.histogram(u, bins=10, range=(0, 1))
     assert (np.abs(hist / n - 0.1) < 0.01).all()  # flat reliability, not just the mean
+
+
+def test_package_randomized_pit_is_uniform_for_perfect_models():
+    from nflprops.calibration import randomized_pit
+    rng = np.random.default_rng(3)
+    n = 80_000
+    cases = [
+        (Marginal("rushing_tds", "poisson", (0.4,), 1.0, n), rng.poisson(0.4, n).astype(float)),
+        (Marginal("rushing_yards", "gamma_zinf", (2.0, 20.0), 0.7, n),
+         np.where(rng.uniform(size=n) < 0.7, rng.gamma(2.0, 20.0, n), 0.0)),
+    ]
+    for fit, y in cases:
+        u = randomized_pit(fit, y, rng)
+        assert abs(u.mean() - 0.5) < 0.01, fit.family
+
+
+def test_count_fits_do_not_double_inflate_zeros():
+    import pandas as pd
+
+    from nflprops.marginals import fit_player, over_prob
+    rng = np.random.default_rng(4)
+    y = rng.poisson(0.5, 400).astype(float)
+    df = pd.DataFrame({"player_id": "p", "rushing_tds": y})
+    fit = fit_player(df, "p", "rushing_tds", "poisson")
+    assert fit.p_active == 1.0
+    assert abs(over_prob(fit, 0.5) - (y > 0.5).mean()) < 0.05
+
+
+def test_randomized_pit_handles_negative_yards_as_the_zero_atom():
+    from nflprops.calibration import randomized_pit
+    rng = np.random.default_rng(5)
+    n, mu, sd, p_act = 80_000, 20.0, 25.0, 0.9
+    v = rng.normal(mu, sd, n)                          # includes negative yardage games
+    y = np.where(rng.uniform(size=n) < p_act, v, 0.0)  # what the field produces
+    fit = Marginal("rushing_yards", "normal_zinf", (mu, sd), p_act, n)
+    u = randomized_pit(fit, y, rng)
+    assert abs(u.mean() - 0.5) < 0.01

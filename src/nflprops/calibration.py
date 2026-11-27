@@ -19,14 +19,36 @@ from scipy import stats
 
 from . import marginals as M
 
+DISCRETE_FAMILIES = {"poisson", "nb"}
+
+
+def randomized_pit(fit: M.Marginal, y: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Randomized PIT (Czado, Gneiting & Held 2009) against the sampled mixture.
+
+    u = F(y-) + V * (F(y) - F(y-)), V ~ U(0,1). Uniform(0,1) for a correctly specified model,
+    including at the zero atom and for integer counts, where the plain u = F(y) is not.
+    """
+    y = np.asarray(y, dtype=float)
+    if fit.family not in DISCRETE_FAMILIES:
+        y = np.maximum(y, 0.0)   # the simulator clips at 0; a -3 yard game is the zero atom
+    hi = M.mixture_cdf(fit, y)
+    if fit.family in DISCRETE_FAMILIES:
+        lo = M.mixture_cdf(fit, y - 1)
+    else:
+        lo = np.where(y <= 0, 0.0, hi)
+    return lo + rng.uniform(size=len(y)) * (hi - lo)
+
 
 def pit_backtest(train: pd.DataFrame, test: pd.DataFrame,
-                 stats_tuples: tuple[tuple[str, str], ...]) -> pd.DataFrame:
-    """Leakage-free PIT calibration backtest (train < test seasons).
+                 stats_tuples: tuple[tuple[str, str], ...], seed: int = 0) -> pd.DataFrame:
+    """Temporal PIT calibration backtest (ADR-0003).
 
-    For each player fit the marginal on train, then compute u = CDF(actual) on
-    test. Calibrated => u ~ Uniform(0,1). Returns per-stat summary.
+    For each player fit the marginal on `train` (callers pass seasons strictly before the
+    test seasons), then score each test game with the randomized PIT. Calibrated means
+    u ~ Uniform(0,1). The KS p-value treats player-games as independent, so it is
+    descriptive only; the gate uses player-clustered CIs (scripts/calibration_audit.py).
     """
+    rng = np.random.default_rng(seed)
     rows = []
     for stat, family in stats_tuples:
         us = []
@@ -34,15 +56,12 @@ def pit_backtest(train: pd.DataFrame, test: pd.DataFrame,
             fit = M.fit_player(train, pid, stat, family, min_games=12)
             if fit is None:
                 continue
-            y = g[stat].astype(float).to_numpy()
-            for v in y:
-                if np.isnan(v):
-                    continue
-                u = float(M.cdf(fit, np.array([v]))[0])
-                us.append(max(min(u, 1 - 1e-9), 1e-9))
+            y = g[stat].dropna().astype(float).to_numpy()
+            if len(y):
+                us.append(randomized_pit(fit, y, rng))
         if not us:
             continue
-        us = np.array(us)
+        us = np.clip(np.concatenate(us), 1e-9, 1 - 1e-9)
         _ks, p = stats.kstest(us, "uniform")
         rows.append({
             "stat": stat, "n": len(us), "mean_u": float(us.mean()),

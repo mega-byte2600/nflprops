@@ -16,11 +16,19 @@ An item is done only when its acceptance criteria are shown by command output in
 ## M1: statistical correctness (Statistician + Model engineer)
 | ID | Item | Depends | Acceptance (measured) | Status |
 |---|---|---|---|---|
-| S1 | Correct PIT in `calibration.py`: score against the sampled mixture, randomized at atoms; strictly temporal split in `cli calibration` | O1 | A synthetic perfectly specified Poisson, NB and zero-inflated gamma each score mean-u in [0.49, 0.51] (pytest); the CLI trains on seasons < min(test) | todo |
-| S2 | TD: apply the Poisson once (or a hurdle model) in `marginals` | S1 | Audit: TD Brier below as-shipped (0.215 and 0.187) and skill > 0; `/stat-rigor review` APPROVE | todo |
-| S3 | Recency weighting plus empirical-Bayes shrinkage toward a position/role prior, tuned on 2021 only | S2 | Audit on 2022–23: skill > 0 with the bootstrap CI excluding 0 for at least 2 yardage stats; `/stat-rigor review` APPROVE | todo |
-| S4 | Held-out calibration map (isotonic, or beta for small samples), fit on season t−1 and tested on t | S3 | Rolling-origin audit (test 2023, then 2024): at least 2 stats gate PASS; `docs/audit/latest.json` committed | todo |
-| S5 | The snapshot carries per-stat gate results; `p_over` is null for failing stats, which are marked `experimental` | S4, B2 | pytest: a failing stat has a null `p_over` in the snapshot | todo |
+| S1 | Correct PIT in `calibration.py`: score against the sampled mixture, randomized at atoms; strictly temporal split in `cli calibration` | O1 | A synthetic perfectly specified Poisson, NB and zero-inflated gamma each score mean-u in [0.49, 0.51] (pytest); the CLI trains on seasons < min(test) | review |
+| S2 | TD: apply the Poisson once (or a hurdle model) in `marginals` | S1 | Audit: TD Brier below as-shipped (0.215 and 0.187) and skill > 0; `/stat-rigor review` APPROVE | review |
+| S3 | Recency weighting plus empirical-Bayes shrinkage toward a position/role prior, tuned on 2021 only | S2 | Audit on 2022–23: skill > 0 with the bootstrap CI excluding 0 for at least 2 yardage stats; `/stat-rigor review` APPROVE | review (v2: 3/3 yardage stats) |
+| S4 | Held-out calibration map (isotonic, or beta for small samples), fit on season t−1 and tested on t | S3 | Rolling-origin audit (test 2023, then 2024): at least 2 stats gate PASS; `docs/audit/latest.json` committed | review (v2: 5/5 PASS on 2024–26) |
+| S6 | Usage prior from free `snap_counts` and `ff_opportunity` (CarpeDATA onboard first) | S4 | `model_v2_eval.py`: Brier skill improves beyond the 2024–26 CI of v2 for at least 2 stats; `/stat-rigor review` APPROVE | todo |
+| S7 | Availability from free `injuries` (Out/Doubtful players excluded; Questionable adjusts) | S4 | Audit shows no worse calibration; fewer predictions for players who did not play | todo |
+| S5 | The snapshot uses projection v2 and carries per-stat gate results; `p_over` is null for failing stats, which are marked `experimental` | S4, B2 | pytest: a failing stat has a null `p_over` in the snapshot | todo |
+
+## M1b: data (CarpeDATA)
+| ID | Item | Depends | Acceptance | Status |
+|---|---|---|---|---|
+| D1 | Free source layer (`sources.py`): current-season stats, closing lines, snaps, injuries, depth charts; resilient fetching; health check | — | `check_sources.py`: all FRESH; hermetic tests for 403/429/5xx/schema/stale | review |
+| D2 | `ensure_cache` and the snapshot builder read the combined 1999–present table via `sources.player_weeks` | D1 | The snapshot `data_as_of` is the latest nflverse week | todo |
 
 ## M2: contract and integrity (Backend)
 | ID | Item | Depends | Acceptance | Status |

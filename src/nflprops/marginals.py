@@ -65,14 +65,17 @@ def fit_player(df: pd.DataFrame, player_id: str, stat: str, family: str,
         if sd <= 0:
             return None
         return Marginal(stat, "normal_zinf", (float(mu), float(sd)), ppos, len(x))
+    # Count families are fit on ALL games (zeros included), so they already carry the zero
+    # mass: p_active = 1.0. Gating them again double-counts zeros (audit 2026-11-27: anytime
+    # TD 0.116 predicted vs 0.274 actual).
     if family == "poisson":                    # TDs
-        return Marginal(stat, "poisson", (float(x.mean()),), ppos, len(x))
+        return Marginal(stat, "poisson", (float(x.mean()),), 1.0, len(x))
     if family == "dispersion-gated-nb":        # receptions
         disp = float(x.var(ddof=1) / x.mean())
         mom = nb_mom(x)
         if disp > 1.15 and mom is not None:
-            return Marginal(stat, "nb", mom, ppos, len(x))
-        return Marginal(stat, "poisson", (float(x.mean()),), ppos, len(x))
+            return Marginal(stat, "nb", mom, 1.0, len(x))
+        return Marginal(stat, "poisson", (float(x.mean()),), 1.0, len(x))
     raise ValueError(f"unknown family {family}")
 
 
@@ -122,6 +125,12 @@ def cdf(fit: Marginal, vals: np.ndarray) -> np.ndarray:
         return stats.poisson.cdf(np.floor(a), lam)
     r, p = fit.params
     return stats.nbinom.cdf(np.floor(a), r, p)
+
+
+def mixture_cdf(fit: Marginal, vals) -> np.ndarray:
+    """CDF of exactly what rvs samples: 0 w.p. 1 - p_active, else max(active draw, 0)."""
+    a = np.asarray(vals, dtype=float)
+    return np.where(a < 0, 0.0, (1 - fit.p_active) + fit.p_active * cdf(fit, a))
 
 
 def over_prob(fit: Marginal, line: float) -> float:
